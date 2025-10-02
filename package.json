@@ -1,0 +1,41 @@
+{
+  "name": "@ms-sql-mcp-server/server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol (MCP) server for Microsoft SQL Server database exploration, analysis, and Entity Framework code generation",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "mssql-mcp-server": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "mssql",
+    "sql-server",
+    "entity-framework",
+    "database",
+    "claude-code"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "mssql": "^11.0.1",
+    "winston": "^3.18.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/mssql": "^9.1.5",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

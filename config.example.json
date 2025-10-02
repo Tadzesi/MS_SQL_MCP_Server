@@ -1,0 +1,57 @@
+{
+  "connections": {
+    "dev": {
+      "server": "localhost",
+      "database": "master",
+      "authentication": "integrated",
+      "readonly": true,
+      "environment": "development",
+      "port": 1433,
+      "encrypt": false,
+      "trustServerCertificate": true
+    },
+    "staging": {
+      "server": "staging-server.example.com",
+      "database": "master",
+      "authentication": "sql",
+      "username": "readonly_user",
+      "password": "your_password_here",
+      "readonly": true,
+      "environment": "staging",
+      "port": 1433,
+      "encrypt": true,
+      "trustServerCertificate": false
+    },
+    "prod": {
+      "server": "prod-server.example.com",
+      "database": "master",
+      "authentication": "sql",
+      "username": "readonly_user",
+      "password": "your_password_here",
+      "readonly": true,
+      "environment": "production",
+      "requireConfirmation": true,
+      "port": 1433,
+      "encrypt": true,
+      "trustServerCertificate": false
+    }
+  },
+  "limits": {
+    "max_rows": 10000,
+    "query_timeout_seconds": 30,
+    "max_query_length": 50000
+  },
+  "code_generation": {
+    "default_namespace": "MyApp.Data",
+    "use_nullable_reference_types": true,
+    "entity_framework_version": "8.0",
+    "use_records_for_dtos": false
+  },
+  "features": {
+    "enable_write_operations": false,
+    "enable_procedure_execution": false,
+    "enable_cross_database_queries": true,
+    "enable_schema_comparison": true
+  },
+  "current_connection": "dev"
+}

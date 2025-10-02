@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm run build:*)",
+      "Bash(node:*)",
+      "Bash(sqlcmd:*)",
+      "Read(//c/Users/mhorny/AppData/Roaming/Claude/**)",
+      "Bash(findstr:*)",
+      "Bash(npm install:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
