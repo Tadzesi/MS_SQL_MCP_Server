@@ -7,7 +7,8 @@
       "Bash(sqlcmd:*)",
       "Read(//c/Users/mhorny/AppData/Roaming/Claude/**)",
       "Bash(findstr:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
