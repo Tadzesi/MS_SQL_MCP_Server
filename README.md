@@ -1,79 +1,117 @@
 # MS SQL MCP Server
 
-A comprehensive Model Context Protocol (MCP) server that connects Claude Code to Microsoft SQL Server databases for exploration, analysis, and Entity Framework Core code generation.
+A Model Context Protocol (MCP) server that connects Claude Desktop and Claude Code to Microsoft SQL Server databases, enabling AI-powered database exploration, analysis, and Entity Framework Core code generation through natural language.
 
-## Why This Exists
+## What is MCP?
 
-This MCP server bridges the gap between Claude Code and Microsoft SQL Server, enabling AI-assisted database development workflows:
+[Model Context Protocol](https://modelcontextprotocol.io) is an open standard that allows AI assistants like Claude to securely connect to external data sources and tools. This server implements MCP to bridge Claude with SQL Server databases.
 
-- **Database Exploration**: Ask Claude to inspect your database schema, understand table relationships, and discover stored procedures without leaving your IDE
-- **Code Generation**: Generate production-ready Entity Framework Core code (entities, DbContext, repositories, DTOs) directly from your database schema
-- **Performance Analysis**: Identify slow queries, missing indexes, and blocking chains through natural language conversations
-- **Documentation**: Auto-generate data dictionaries, ER diagrams, and API documentation from your database
-- **Safe Operations**: Enforces read-only access by default, preventing accidental data modifications during exploration
+## Key Capabilities
 
-Instead of switching between SSMS, documentation tools, and your IDE, simply ask Claude in natural language and get instant, contextual database insights and code generation.
+**🔍 Database Exploration**
+
+- Inspect schemas, tables, columns, indexes, and relationships
+- View stored procedures and views without SSMS
+- Explore foreign key relationships across tables
+
+**💻 Entity Framework Code Generation**
+
+- Generate C# entity classes with Data Annotations or Fluent API
+- Create complete DbContext with all DbSets
+- Generate DTOs (Create, Update, Read, List)
+- Create repository interfaces with async methods
+
+**⚡ Performance Analysis**
+
+- Monitor active queries and execution statistics
+- Identify missing indexes and blocking chains
+- Analyze wait statistics and index usage
+
+**📊 Data Profiling & Quality**
+
+- Sample table data and analyze distributions
+- Check for nulls, duplicates, and data quality issues
+- Get table size and row count statistics
+
+**📝 Documentation Generation**
+
+- Create comprehensive data dictionaries
+- Generate ER diagrams (Mermaid/PlantUML)
+- Document stored procedures and generate API specs
+
+**🔒 Security First**
+
+- Read-only by default (no INSERT/UPDATE/DELETE/DROP)
+- Query validation blocks dangerous operations
+- Automatic row limiting and timeout enforcement
 
 ## Quick Start
 
-1. **Install dependencies and build**
-   ```bash
-   npm install
-   npm run build
-   ```
+### 1. Install and Build
 
-2. **Configure connection** (choose one method)
+```bash
+npm install
+npm run build
+```
 
-   Option A - Create `config.json`:
-   ```json
-   {
-     "connections": {
-       "default": {
-         "server": "localhost",
-         "database": "master",
-         "authentication": "integrated"
-       }
-     }
-   }
-   ```
+### 2. Configure Claude Desktop
 
-   Option B - Use environment variables:
-   ```bash
-   export MSSQL_SERVER=localhost
-   export MSSQL_DATABASE=master
-   export MSSQL_AUTH=integrated
-   ```
+Edit your Claude Desktop MCP configuration file:
 
-3. **Add to Claude Code MCP settings**
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+**macOS/Linux**: `~/.config/claude/claude_desktop_config.json`
 
-   Edit Claude Desktop config (`%APPDATA%\Claude\claude_desktop_config.json` on Windows):
-   ```json
-   {
-     "mcpServers": {
-       "mssql": {
-         "command": "node",
-         "args": ["C:\\path\\to\\MS_SQL_MCP_Server\\dist\\index.js"]
-       }
-     }
-   }
-   ```
+Add the MCP server configuration:
 
-4. **Start asking Claude**
-   ```
-   Show me all tables in the Sales database
-   Generate a C# entity for the Products table
-   Find slow queries running right now
-   ```
+```json
+{
+  "mcpServers": {
+    "mssql": {
+      "command": "node",
+      "args": ["C:\\absolute\\path\\to\\MS_SQL_MCP_Server\\dist\\index.js"],
+      "env": {
+        "MSSQL_LOCAL_SERVER": "localhost",
+        "MSSQL_LOCAL_DATABASE": "YourDatabase",
+        "MSSQL_LOCAL_AUTH": "sql",
+        "MSSQL_LOCAL_USERNAME": "your_username",
+        "MSSQL_LOCAL_PASSWORD": "your_password"
+      }
+    }
+  }
+}
+```
+
+**Important Notes**:
+
+- Use **absolute path** to `dist/index.js` (not `src/index.ts`)
+- On Windows, use double backslashes (`\\`) or forward slashes (`/`) in paths
+- Restart Claude Desktop after configuration changes
+
+### 3. Start Using with Claude
+
+Open Claude Desktop and start asking:
+
+```
+Show me all tables in the Sales database
+Describe the structure of the Orders table
+Generate a C# entity class for the Products table
+Find slow queries running right now
+Create an ER diagram for my database
+```
+
+The server provides 38 tools that Claude can use to explore your database and generate code.
 
 ## Features
 
 ### 🔍 Schema Inspection (8 tools)
+
 - List databases, tables, views, and stored procedures
 - Get detailed table descriptions with columns, indexes, and relationships
 - Explore foreign key relationships
 - View stored procedure and view definitions
 
 ### 🔎 Query Execution & Analysis (6 tools)
+
 - Execute SELECT queries safely (read-only)
 - Validate SQL syntax
 - Analyze query execution plans
@@ -81,6 +119,7 @@ Instead of switching between SSMS, documentation tools, and your IDE, simply ask
 - Performance analysis
 
 ### 📊 Performance Monitoring (5 tools)
+
 - Monitor active queries
 - Analyze query statistics
 - Check index usage
@@ -88,12 +127,14 @@ Instead of switching between SSMS, documentation tools, and your IDE, simply ask
 - Review wait statistics
 
 ### 📈 Data Profiling (4 tools)
+
 - Sample table data
 - Analyze column statistics
 - Check data quality
 - Get table statistics
 
 ### 🏗️ Entity Framework Code Generation (6 tools)
+
 - Generate entity classes with Data Annotations
 - Create DbContext with Fluent API
 - Generate repository interfaces
@@ -102,81 +143,83 @@ Instead of switching between SSMS, documentation tools, and your IDE, simply ask
 - Create migration templates
 
 ### 📝 Documentation (4 tools)
+
 - Generate comprehensive data dictionaries
 - Create ER diagrams (Mermaid, PlantUML)
 - Document stored procedures
 - Generate REST API documentation
 
 ### 🔄 Schema Comparison (2 tools)
+
 - Compare schemas between databases
 - Generate synchronization scripts
 
-## Installation
+## Environment Configuration
+
+The MCP server supports multiple connection profiles through environment variables. Configure different environments (local, development, production) using prefixed environment variables.
+
+### Connection Profile Environment Variables
+
+The server recognizes three profile prefixes: `LOCAL`, `DEV`, and `PROD`.
+
+#### LOCAL Profile (Development)
 
 ```bash
-npm install
-npm run build
+MSSQL_LOCAL_SERVER=localhost
+MSSQL_LOCAL_DATABASE=YourDatabase
+MSSQL_LOCAL_AUTH=sql                    # or "integrated" for Windows Auth
+MSSQL_LOCAL_USERNAME=your_username      # Required for SQL auth
+MSSQL_LOCAL_PASSWORD=your_password      # Required for SQL auth
+MSSQL_LOCAL_PORT=1433                   # Optional, defaults to 1433
+MSSQL_LOCAL_ENCRYPT=false               # Optional, defaults to false
+MSSQL_LOCAL_TRUST_CERT=true             # Optional, defaults to true
+MSSQL_LOCAL_READONLY=true               # Optional, defaults to true
 ```
 
-## Configuration
+#### DEV Profile (Development Server)
 
-Create a `config.json` file in the project root (or use environment variables):
+```bash
+MSSQL_DEV_SERVER=dev-sql-server
+MSSQL_DEV_DATABASE=DevDatabase
+MSSQL_DEV_AUTH=sql
+MSSQL_DEV_USERNAME=dev_user
+MSSQL_DEV_PASSWORD=dev_password
+```
+
+#### PROD Profile (Production - Read Only!)
+
+```bash
+MSSQL_PROD_SERVER=prod-sql-server
+MSSQL_PROD_DATABASE=ProductionDatabase
+MSSQL_PROD_AUTH=sql
+MSSQL_PROD_USERNAME=readonly_user
+MSSQL_PROD_PASSWORD=readonly_password
+MSSQL_PROD_READONLY=true                # Always use read-only for production!
+```
+
+### Authentication Methods
+
+**SQL Server Authentication** (recommended for cross-platform):
 
 ```json
-{
-  "connections": {
-    "default": {
-      "server": "localhost",
-      "database": "master",
-      "authentication": "integrated",
-      "readonly": true,
-      "environment": "development",
-      "port": 1433,
-      "encrypt": false,
-      "trustServerCertificate": true
-    }
-  },
-  "limits": {
-    "max_rows": 10000,
-    "query_timeout_seconds": 30,
-    "max_query_length": 50000
-  },
-  "code_generation": {
-    "default_namespace": "MyApp.Data",
-    "use_nullable_reference_types": true,
-    "entity_framework_version": "8.0",
-    "use_records_for_dtos": false
-  },
-  "features": {
-    "enable_write_operations": false,
-    "enable_procedure_execution": false,
-    "enable_cross_database_queries": true,
-    "enable_schema_comparison": true
-  },
-  "current_connection": "default"
+"env": {
+  "MSSQL_LOCAL_AUTH": "sql",
+  "MSSQL_LOCAL_USERNAME": "your_username",
+  "MSSQL_LOCAL_PASSWORD": "your_password"
 }
 ```
 
-### Environment Variables
+**Windows Integrated Authentication** (Windows only):
 
-Alternatively, configure via environment variables:
+```json
+"env": {
+  "MSSQL_LOCAL_AUTH": "integrated"
+}
+```
 
-- `MSSQL_SERVER` - SQL Server hostname
-- `MSSQL_DATABASE` - Database name (default: master)
-- `MSSQL_AUTH` - Authentication type: `integrated` or `sql`
-- `MSSQL_USER` - Username (for SQL auth)
-- `MSSQL_PASSWORD` - Password (for SQL auth)
-- `MSSQL_PORT` - Port number (default: 1433)
-- `MSSQL_ENCRYPT` - Enable encryption (default: false)
-- `MSSQL_TRUST_CERT` - Trust server certificate (default: true)
+### Configuration in Claude Desktop
 
-## Usage with Claude Code
-
-Add to your Claude Code MCP settings:
-
-### Windows
-
-Edit `%APPDATA%\Claude\claude_desktop_config.json`:
+Add environment variables to the MCP server configuration:
 
 ```json
 {
@@ -185,414 +228,454 @@ Edit `%APPDATA%\Claude\claude_desktop_config.json`:
       "command": "node",
       "args": ["C:\\path\\to\\MS_SQL_MCP_Server\\dist\\index.js"],
       "env": {
-        "MSSQL_SERVER": "localhost",
-        "MSSQL_DATABASE": "master",
-        "MSSQL_AUTH": "integrated"
+        "MSSQL_LOCAL_SERVER": "localhost",
+        "MSSQL_LOCAL_DATABASE": "MyDatabase",
+        "MSSQL_LOCAL_AUTH": "sql",
+        "MSSQL_LOCAL_USERNAME": "user",
+        "MSSQL_LOCAL_PASSWORD": "pass",
+
+        "MSSQL_DEV_SERVER": "dev-server",
+        "MSSQL_DEV_DATABASE": "DevDB",
+        "MSSQL_DEV_AUTH": "sql",
+        "MSSQL_DEV_USERNAME": "dev_user",
+        "MSSQL_DEV_PASSWORD": "dev_pass"
       }
     }
   }
 }
 ```
 
-### macOS/Linux
+### Default Configuration
 
-Edit `~/.config/claude/claude_desktop_config.json`:
+If no environment variables are set, the server uses a hardcoded default:
 
-```json
-{
-  "mcpServers": {
-    "mssql": {
-      "command": "node",
-      "args": ["/path/to/MS_SQL_MCP_Server/dist/index.js"],
-      "env": {
-        "MSSQL_SERVER": "localhost",
-        "MSSQL_DATABASE": "master",
-        "MSSQL_AUTH": "integrated"
-      }
-    }
-  }
-}
+- **Server**: NKKE13399
+- **Database**: database-edu-care-portal
+- **Auth**: SQL (local_user / local_user)
+
+**Important**: Override this by setting environment variables before deploying.
+
+## Project Structure
+
+```
+MS_SQL_MCP_Server/
+├── src/
+│   ├── index.ts                    # MCP server entry point
+│   │                               # - Implements MCP protocol
+│   │                               # - Registers 38 tools
+│   │                               # - Routes tool calls to handlers
+│   │
+│   ├── config.ts                   # Configuration management
+│   │                               # - Loads environment variables
+│   │                               # - Manages connection profiles
+│   │
+│   ├── database.ts                 # Database connection layer
+│   │                               # - Connection pooling
+│   │                               # - Query validation (read-only)
+│   │                               # - Query execution
+│   │
+│   ├── types.ts                    # TypeScript type definitions
+│   ├── logger.ts                   # Winston logging (stderr)
+│   │
+│   └── tools/                      # Tool implementations
+│       ├── schema-tools.ts         # Schema inspection (8 tools)
+│       ├── query-tools.ts          # Query execution (6 tools)
+│       ├── performance-tools.ts    # Performance monitoring (5 tools)
+│       ├── profiling-tools.ts      # Data profiling (4 tools)
+│       ├── codegen-tools.ts        # EF Core code generation (6 tools)
+│       ├── documentation-tools.ts  # Documentation generation (4 tools)
+│       └── comparison-tools.ts     # Schema comparison (2 tools)
+│
+├── dist/                           # Compiled JavaScript (generated)
+│   └── index.js                    # Entry point for MCP
+│
+├── package.json                    # Dependencies and scripts
+├── tsconfig.json                   # TypeScript configuration
+├── README.md                       # This file
+└── CLAUDE.md                       # Development guide for Claude Code
 ```
 
-## Available Tools
+### Architecture
 
-### Schema Inspection
+**Layered Design**:
 
-1. **mssql_list_databases** - List all accessible databases
-2. **mssql_list_tables** - List tables in a database
-3. **mssql_describe_table** - Get detailed table schema
-4. **mssql_list_stored_procedures** - List stored procedures
-5. **mssql_get_procedure_definition** - Get procedure source code
-6. **mssql_list_views** - List database views
-7. **mssql_get_view_definition** - Get view definition
-8. **mssql_get_relationships** - Map table relationships
+```
+MCP Protocol Layer (index.ts)
+         ↓
+Configuration Layer (config.ts)
+         ↓
+Database Layer (database.ts)
+         ↓
+Tool Categories (tools/*)
+```
 
-### Query Execution
+**Key Design Patterns**:
 
-9. **mssql_execute_query** - Execute SELECT queries
-10. **mssql_execute_scalar** - Execute queries returning single values
+- **Dependency Injection**: Tool classes receive `DatabaseManager` instance
+- **Connection Pooling**: Automatic pool management by connection string
+- **Read-Only Enforcement**: Multi-layer security (validation + connection flags)
+- **MCP Integration**: Standard protocol for AI-to-database communication
 
-### Query Analysis
+## MCP Server Functionality
 
-11. **mssql_explain_query** - Analyze execution plans
-12. **mssql_validate_syntax** - Validate SQL syntax
-13. **mssql_find_missing_indexes** - Find missing index recommendations
-14. **mssql_analyze_query_performance** - Deep performance analysis
+The server implements the Model Context Protocol, exposing **38 tools** that Claude can use through natural language. Each tool is a function that Claude can call to interact with SQL Server.
 
-### Performance Monitoring
+### How MCP Tools Work
 
-15. **mssql_active_queries** - Show currently executing queries
-16. **mssql_query_stats** - Get query performance statistics
-17. **mssql_index_usage** - Analyze index usage
-18. **mssql_blocking_chains** - Identify blocking situations
-19. **mssql_wait_statistics** - Analyze wait statistics
+1. **Natural Language → Tool Selection**: You ask Claude in natural language
+2. **Tool Execution**: Claude selects and calls appropriate MCP tools
+3. **Database Interaction**: Server executes safe, read-only operations
+4. **Result Formatting**: Returns data to Claude for presentation
 
-### Data Profiling
+### Tool Categories (38 Total)
 
-20. **mssql_sample_data** - Get sample rows from tables
-21. **mssql_column_statistics** - Analyze column data distribution
-22. **mssql_data_quality_check** - Check for data quality issues
-23. **mssql_table_statistics** - Get table size and statistics
+#### 🔍 Schema Inspection (8 tools)
 
-### Entity Framework Code Generation
+```
+mssql_list_databases              - List all accessible databases
+mssql_list_tables                 - List tables in a database
+mssql_describe_table              - Get complete table metadata (columns, indexes, FKs)
+mssql_list_stored_procedures      - List stored procedures
+mssql_get_procedure_definition    - Get procedure source code
+mssql_list_views                  - List database views
+mssql_get_view_definition         - Get view definition
+mssql_get_relationships           - Map foreign key relationships
+```
 
-24. **mssql_generate_entity_class** - Generate C# entity classes
-25. **mssql_generate_dbcontext** - Generate DbContext
-26. **mssql_generate_repository_interface** - Generate repository interfaces
-27. **mssql_generate_dto_classes** - Generate DTOs
-28. **mssql_generate_ef_configuration** - Generate Fluent API configurations
-29. **mssql_generate_migration_class** - Generate migration templates
+#### 💻 Query Execution & Analysis (6 tools)
 
-### Documentation
+```
+mssql_execute_query               - Execute SELECT queries (read-only)
+mssql_execute_scalar              - Get single value from query
+mssql_explain_query               - Analyze query execution plan
+mssql_validate_syntax             - Validate SQL syntax
+mssql_find_missing_indexes        - Get index recommendations
+mssql_analyze_query_performance   - Deep performance analysis
+```
 
-30. **mssql_generate_data_dictionary** - Create database documentation
-31. **mssql_generate_er_diagram** - Generate ER diagrams
-32. **mssql_document_stored_procedure** - Document procedures
-33. **mssql_generate_api_documentation** - Generate API docs
+#### ⚡ Performance Monitoring (5 tools)
 
-### Schema Comparison
+```
+mssql_active_queries              - Show currently executing queries
+mssql_query_stats                 - Query performance statistics
+mssql_index_usage                 - Index usage analysis
+mssql_blocking_chains             - Identify blocking queries
+mssql_wait_statistics             - Analyze wait statistics
+```
 
-34. **mssql_compare_schemas** - Compare database schemas
-35. **mssql_generate_sync_script** - Generate sync scripts
+#### 📊 Data Profiling (4 tools)
 
-## Example Prompts for Claude Code
+```
+mssql_sample_data                 - Get sample rows from tables
+mssql_column_statistics           - Analyze column distributions
+mssql_data_quality_check          - Check for nulls, duplicates, etc.
+mssql_table_statistics            - Get table size and row counts
+```
 
-### Database Exploration
+#### 🏗️ Entity Framework Code Generation (6 tools)
+
+```
+mssql_generate_entity_class       - Generate C# entity with Data Annotations
+mssql_generate_dbcontext          - Generate DbContext with DbSets
+mssql_generate_repository_interface - Generate repository interface
+mssql_generate_dto_classes        - Generate Create/Update/Read/List DTOs
+mssql_generate_ef_configuration   - Generate Fluent API configuration
+mssql_generate_migration_class    - Generate migration template
+```
+
+#### 📝 Documentation (4 tools)
+
+```
+mssql_generate_data_dictionary    - Create comprehensive data dictionary
+mssql_generate_er_diagram         - Generate Mermaid/PlantUML ER diagrams
+mssql_document_stored_procedure   - Document stored procedure
+mssql_generate_api_documentation  - Generate REST API documentation
+```
+
+#### 🔄 Schema Comparison (2 tools)
+
+```
+mssql_compare_schemas             - Compare schemas between databases
+mssql_generate_sync_script        - Generate T-SQL sync script
+```
+
+#### ⚙️ Configuration (3 tools)
+
+```
+mssql_list_connections            - List available connection profiles
+mssql_switch_connection           - Switch to different connection profile
+mssql_get_current_connection      - Get current connection info
+```
+
+## Example Usage with Claude
+
+Once configured, simply chat with Claude in natural language. Claude will automatically use the MCP tools to fulfill your requests.
+
+### 🔍 Exploring Your Database
 
 ```
 Show me all tables in the Sales database
+
+Describe the Orders table structure including indexes and foreign keys
+
+What are all the relationships between the Customers and Orders tables?
+
+List all stored procedures in the database
 ```
 
-```
-Describe the structure of the Orders table in the dbo schema
-```
-
-```
-What are all the foreign keys in the Customers table?
-```
-
-### Query Development
-
-```
-Write a query to find customers who haven't placed orders in the last 6 months
-```
-
-```
-Analyze the performance of this query: SELECT * FROM Orders WHERE OrderDate > '2024-01-01'
-```
-
-### Entity Framework Code Generation
+### 💻 Code Generation
 
 ```
 Generate a C# entity class for the Products table with navigation properties
+
+Create a complete DbContext for the Sales database using Fluent API
+
+Generate Create, Update, and Read DTOs for the Orders table
+
+Create a repository interface for the Products table with async CRUD methods
 ```
 
-```
-Create a DbContext for the entire Sales database with Fluent API
-```
+### ⚡ Performance Tuning
 
 ```
-Generate DTOs for the Orders table (Create, Update, Read, List)
-```
+Show me all queries currently running that take longer than 10 seconds
 
-```
-Create a repository interface for the Products table with async methods
-```
-
-### Performance Analysis
-
-```
-Show me all slow running queries (longer than 10 seconds)
-```
-
-```
 What indexes are missing on the Orders table?
+
+Are there any blocking queries right now?
+
+Analyze the performance of this query: SELECT * FROM Orders WHERE Status = 'Pending'
 ```
 
-```
-Check if there are any blocking queries right now
-```
-
-### Documentation
+### 📊 Data Analysis
 
 ```
-Create a data dictionary for the Sales database
+Show me a sample of 10 rows from the Customers table
+
+What's the distribution of values in the Status column?
+
+Check for data quality issues in the Orders table
+
+How many rows does each table have?
 ```
 
-```
-Generate an ER diagram in Mermaid format for the database
-```
+### 📝 Documentation
 
 ```
-Document the sp_ProcessOrders stored procedure
+Create a data dictionary for the Sales database in Markdown format
+
+Generate an ER diagram in Mermaid format for all tables
+
+Document the sp_ProcessOrders stored procedure with parameter details
+
+Generate REST API documentation for the Products table
 ```
 
-### Schema Comparison
+### 🔄 Schema Management
 
 ```
-Compare the schemas between dev and prod databases
+Compare the schemas between local and prod connections
+
+What are the differences between the dev and prod databases?
+
+Generate a sync script to update the staging database from production
 ```
 
-```
-Generate a sync script to update prod from staging
-```
+## Security Model
 
-## Security Features
+The server enforces **read-only access** through multiple security layers:
 
-- **Read-only by default** - No write operations allowed through MCP
-- **Query validation** - Blocks dangerous SQL commands
-- **Row limiting** - Automatic limits on SELECT results
-- **Timeout enforcement** - Prevents long-running queries
-- **Connection pooling** - Efficient resource management
-- **Environment detection** - Warnings for production access
+### 1. Query Validation
 
-## Architecture
+- **Regex-based blocking** of dangerous operations in `database.ts:validateReadOnlyQuery()`
+- Blocks: `INSERT`, `UPDATE`, `DELETE`, `DROP`, `TRUNCATE`, `ALTER`, `CREATE`, `EXEC`
+- Only allows queries starting with: `SELECT`, `WITH`, or `EXPLAIN`
+- Dynamic SQL and stored procedure execution disabled by default
 
-### Layered Design
+### 2. Connection-Level Protection
 
-The server follows a layered architecture with clear separation of concerns:
+- All connections use `readonly: true` configuration flag
+- SQL Server connection includes `readOnlyIntent: true` option
+- Prevents accidental writes even if query validation bypassed
 
-```
-MCP Server (index.ts)
-    ↓
-Configuration Layer (config.ts)
-    ↓
-Database Connection Layer (database.ts)
-    ↓
-Tool Categories (tools/*)
-    ├── Schema Inspection
-    ├── Query Execution & Analysis
-    ├── Performance Monitoring
-    ├── Data Profiling
-    ├── Code Generation
-    ├── Documentation
-    └── Schema Comparison
-```
+### 3. Automatic Safety Limits
 
-### Project Structure
+- **Row Limiting**: Automatically injects `TOP N` clause into SELECT queries (default: 10,000 rows)
+- **Timeout Enforcement**: 30-second default timeout prevents runaway queries
+- **Query Length Limits**: Maximum query length enforced (50,000 characters)
 
-```
-src/
-├── index.ts                 # MCP server implementation (570 lines)
-│                           # - Registers all 38 tools with MCP protocol
-│                           # - Routes tool calls to appropriate modules
-│                           # - Handles MCP request/response formatting
-│
-├── config.ts               # Configuration management (90 lines)
-│                           # - Loads from config.json or environment variables
-│                           # - Supports multiple connection profiles
-│                           # - Environment-specific settings
-│
-├── database.ts             # Database connection manager (115 lines)
-│                           # - Connection pooling with lifecycle management
-│                           # - Query validation (enforces read-only)
-│                           # - Two execution patterns: full results & scalar
-│
-├── types.ts                # TypeScript definitions (230 lines)
-│                           # - Configuration, schema, and result types
-│                           # - Strongly typed tool interfaces
-│
-├── logger.ts               # Winston-based logging
-│
-└── tools/
-    ├── schema-tools.ts     # Schema inspection (440 lines)
-    │                       # - Queries sys.tables, sys.columns, sys.indexes
-    │                       # - Complex joins for complete table metadata
-    │
-    ├── query-tools.ts      # Query execution & analysis (180 lines)
-    │                       # - Safe query execution with row limits
-    │                       # - Syntax validation and execution plans
-    │
-    ├── performance-tools.ts # Performance monitoring (180 lines)
-    │                       # - Queries DMVs for active queries & wait stats
-    │                       # - Index usage analysis
-    │
-    ├── profiling-tools.ts  # Data profiling (140 lines)
-    │                       # - Statistical analysis of column data
-    │                       # - Data quality checks
-    │
-    ├── codegen-tools.ts    # EF Core code generation (590 lines)
-    │                       # - SQL to C# type mapping
-    │                       # - Entity, DbContext, DTOs, repositories
-    │                       # - Fluent API and Data Annotations
-    │
-    ├── documentation-tools.ts # Documentation (280 lines)
-    │                       # - Markdown data dictionaries
-    │                       # - Mermaid/PlantUML ER diagrams
-    │
-    └── comparison-tools.ts # Schema comparison (200 lines)
-                            # - Cross-database schema diff
-                            # - T-SQL sync script generation
+### 4. Feature Flags
+
+Configuration-based feature controls in `config.ts`:
+
+```typescript
+features: {
+  enable_write_operations: false,      // Disabled by default
+  enable_procedure_execution: false,   // Disabled by default
+  enable_cross_database_queries: true,
+  enable_schema_comparison: true
+}
 ```
 
-### Core Components
+### Security Best Practices
 
-**MCP Protocol Integration** (`index.ts`)
-- Implements Model Context Protocol using `@modelcontextprotocol/sdk`
-- Two main handlers:
-  - `ListToolsRequestSchema` - Returns metadata for all 38 tools
-  - `CallToolRequestSchema` - Executes tools and returns formatted results
-- Input validation via Zod schemas
-- JSON response formatting with error handling
+✅ **Do**:
 
-**Security Layer** (`database.ts`)
-- Multi-layer read-only enforcement:
-  1. Query validation via regex (blocks INSERT, UPDATE, DELETE, DROP, etc.)
-  2. Connection-level readonly flags
-  3. Automatic row limiting on SELECT queries
-  4. Query timeout enforcement
-- Must start with SELECT, WITH, or EXPLAIN
+- Use dedicated read-only SQL Server accounts
+- Grant only `SELECT`, `VIEW DEFINITION`, `VIEW DATABASE STATE` permissions
+- Test in non-production environments first
+- Review all generated code before using in production
 
-**Code Generation Engine** (`codegen-tools.ts`)
-- Schema discovery → Type mapping → Naming conversion → Code output
-- Handles SQL Server to C# type mappings
-- Generates navigation properties from foreign keys
-- Supports both Data Annotations and Fluent API patterns
+❌ **Don't**:
 
-### How It Works
-
-**Schema Inspection**: Uses SQL Server system catalog views (`sys.tables`, `sys.columns`, `sys.indexes`, `sys.foreign_keys`) to extract complete metadata. The `describeTable()` method orchestrates 7 sub-queries to build comprehensive table information.
-
-**Query Safety**: The `validateReadOnlyQuery()` method uses regex patterns to block dangerous SQL operations. Queries must start with SELECT, WITH, or EXPLAIN. Row limits are automatically injected via `addRowLimit()` which adds TOP clauses to SELECT statements.
-
-**Performance Monitoring**: Queries Dynamic Management Views (DMVs) like `sys.dm_exec_requests`, `sys.dm_exec_query_stats`, and `sys.dm_db_index_usage_stats` to provide real-time performance insights.
-
-**Code Generation Flow**:
-1. Call `SchemaTools.describeTable()` to get complete metadata
-2. Use `mapSqlTypeToCSharp()` to convert SQL Server types to C# types
-3. Apply `toPascalCase()` for C# naming conventions
-4. Generate navigation properties from foreign key metadata
-5. Output formatted C# code with proper indentation
-
-**Connection Management**: The `DatabaseManager` maintains a connection pool map keyed by connection string. Pools persist for the server lifetime and handle automatic lifecycle management.
+- Use sa or admin accounts
+- Connect to production with write permissions
+- Bypass query validation
+- Execute generated sync scripts without review
 
 ## Development
+
+### Build Commands
 
 ```bash
 # Install dependencies
 npm install
 
-# Build
+# Build TypeScript to JavaScript
 npm run build
 
-# Development mode (watch)
+# Development mode (watch for changes and auto-restart)
 npm run dev
 
-# Run directly
+# Run the compiled server
 npm start
+# or
+node dist/index.js
 ```
+
+### TypeScript Configuration
+
+- **Target**: ES2022
+- **Module**: Node16 (ES Modules)
+- **Output**: `./dist` directory
+- **Important**: All imports must include `.js` extension (even for `.ts` files)
+
+### Project Dependencies
+
+- `@modelcontextprotocol/sdk` - MCP protocol implementation
+- `mssql` - SQL Server driver
+- `winston` - Logging
+- `zod` - Schema validation
 
 ## Requirements
 
-- Node.js 18+
-- SQL Server 2016+ or Azure SQL Database
-- Read access to target databases
-- Network connectivity to SQL Server
+- **Node.js**: 18.0.0 or higher
+- **SQL Server**: 2016+ or Azure SQL Database
+- **Permissions**: Read access (`SELECT`, `VIEW DEFINITION`, `VIEW DATABASE STATE`)
+- **Network**: TCP/IP connectivity to SQL Server (port 1433)
 
-## Authentication
+## Known Limitations
 
-### Windows Integrated Authentication
-
-```json
-{
-  "authentication": "integrated"
-}
-```
-
-### SQL Server Authentication
-
-```json
-{
-  "authentication": "sql",
-  "username": "your_username",
-  "password": "your_password"
-}
-```
-
-## Limitations
-
-- **Read-only operations** - No INSERT, UPDATE, DELETE, or DROP commands
-- **No stored procedure execution** - For safety (can be enabled in config)
-- **Query row limits** - Maximum 10,000 rows per query (configurable)
-- **Timeout enforcement** - 30-second default query timeout
+- **Read-only operations**: No INSERT/UPDATE/DELETE/DROP commands
+- **No stored procedure execution**: Disabled by default for safety
+- **Query row limits**: Maximum 10,000 rows per query (configurable in limits.max_rows)
+- **Timeout enforcement**: 30-second default query timeout (configurable)
+- **Execution plans**: Simplified analysis only; full plans require SSMS
 
 ## Troubleshooting
 
-### Connection Issues
+### MCP Server Not Appearing in Claude
 
-1. Verify SQL Server is accessible
-2. Check firewall settings (port 1433)
-3. Confirm authentication credentials
-4. Enable TCP/IP protocol in SQL Server Configuration Manager
+1. **Check configuration file path**:
 
-### Authentication Errors
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+   - macOS: `~/.config/claude/claude_desktop_config.json`
 
-For Windows Authentication:
-- Ensure the user running Claude Code has database access
-- Check SQL Server allows Windows authentication
+2. **Verify absolute path to dist/index.js**:
 
-For SQL Authentication:
-- Verify username and password
-- Ensure SQL Server authentication is enabled
-- Check user has appropriate database permissions
+   ```json
+   "args": ["C:\\absolute\\path\\to\\MS_SQL_MCP_Server\\dist\\index.js"]
+   ```
 
-### Permission Errors
+   - Must point to compiled `dist/index.js`, not `src/index.ts`
+   - On Windows, use `\\` or `/` in paths
+
+3. **Restart Claude Desktop** after configuration changes
+
+4. **Check for errors**: Claude Desktop logs show MCP server startup errors
+
+### Connection Failures
+
+**SQL Server not accessible**:
+
+- Verify server is running: `sqlcmd -S servername -Q "SELECT @@VERSION"`
+- Check firewall allows port 1433
+- Confirm TCP/IP protocol enabled in SQL Server Configuration Manager
+
+**Authentication errors**:
+
+_SQL Authentication_:
+
+```bash
+# Test connection with sqlcmd
+sqlcmd -S servername -U username -P password -Q "SELECT DB_NAME()"
+```
+
+- Verify SQL Server authentication mode is enabled (not Windows-only)
+- Check username and password are correct
+
+_Windows Authentication_:
+
+- User running Claude Desktop must have SQL Server access
+- Test: `sqlcmd -S servername -E -Q "SELECT SUSER_NAME()"`
+
+**Permission errors**:
 
 Grant minimum required permissions:
 
 ```sql
--- Grant read access to databases
+USE master;
 GRANT VIEW ANY DATABASE TO [username];
 GRANT VIEW ANY DEFINITION TO [username];
 GRANT VIEW DATABASE STATE TO [username];
 GRANT VIEW SERVER STATE TO [username];
 
--- Grant read access to specific database
 USE YourDatabase;
 GRANT SELECT TO [username];
 ```
 
-## Best Practices
+### Debugging
 
-1. **Use read-only accounts** - Create dedicated read-only SQL users
-2. **Limit database access** - Only grant access to necessary databases
-3. **Configure row limits** - Set appropriate max_rows for your environment
-4. **Review generated code** - Always review EF Core code before using
-5. **Test sync scripts** - Test schema sync scripts in dev before production
-6. **Monitor performance** - Use performance tools to identify issues early
+**Enable detailed logging**:
+
+- MCP server logs to stderr (visible in Claude Desktop logs)
+- Check `Logger` output for connection details
+
+**Test MCP server manually**:
+
+```bash
+node dist/index.js
+# MCP server should start and wait for stdin
+```
+
+**Common issues**:
+
+- ❌ Path points to `src/index.ts` → ✅ Use `dist/index.js`
+- ❌ Relative path in config → ✅ Use absolute path
+- ❌ Missing `npm run build` → ✅ Build TypeScript first
+- ❌ Environment variables wrong → ✅ Check `MSSQL_LOCAL_*` prefix
+
+## Contributing
+
+See [CLAUDE.md](CLAUDE.md) for architecture details and development guidance.
 
 ## License
 
 MIT
 
-## Contributing
+## Resources
 
-See [CLAUDE.md](CLAUDE.md) for development guidance.
-
-## Support
-
-For issues and questions:
-- Review the functional specification in `Documentation/`
-- Check connection configuration
-- Verify SQL Server permissions
-- Review server logs for detailed errors
+- **MCP Protocol**: https://modelcontextprotocol.io
+- **Claude Desktop**: https://claude.ai/download
+- **SQL Server**: https://www.microsoft.com/sql-server
+- **Entity Framework Core**: https://docs.microsoft.com/ef/core

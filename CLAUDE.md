@@ -26,6 +26,13 @@ npm start
 node dist/index.js
 ```
 
+**Build System**:
+- TypeScript compiler: Target ES2022, Node16 module resolution
+- Output directory: `./dist` (compiled JavaScript)
+- Source maps and declarations generated for debugging
+- ES modules (`.js` extensions in imports required)
+- Development mode uses `concurrently` to run `tsc --watch` + `nodemon`
+
 ## Architecture
 
 ### High-Level Structure
@@ -58,19 +65,25 @@ Tool Categories (tools/*)
 - Handles request/response formatting for MCP
 - Main entry point: `MsSqlMcpServer` class
 
-**config.ts** (90 lines)
+**config.ts** (115 lines)
 - `ConfigManager` class manages configuration
-- Loads from: config.json, environment variables, or defaults
-- Supports multiple connection profiles (dev/staging/prod)
+- Environment variable loading: Uses `MSSQL_LOCAL_*`, `MSSQL_PROD_*`, `MSSQL_DEV_*` prefixes
+- Creates connection profiles automatically (local/prod/dev keys)
+- Default hardcoded connection: NKKE13399/database-edu-care-portal (SQL auth)
 - Configuration schema in `types.ts`
 
-**database.ts** (115 lines)
+**database.ts** (165 lines)
 - `DatabaseManager` class handles SQL Server connections
-- Connection pooling with automatic lifecycle management
+- Connection pooling with automatic lifecycle management via Map keyed by connection string
+- **Authentication Handling**: SQL auth uses `user`/`password` properties directly; Windows auth uses `authentication.type='ntlm'` object
 - **Critical**: `validateReadOnlyQuery()` enforces security by blocking write operations
 - Two execution patterns:
   - `executeQuery()` - returns full result sets
-  - `executeScalar()` - returns single values
+  - `executeScalar()` - returns single value from first column of first row
+
+**logger.ts**
+- Winston-based logging system for debugging connection and query issues
+- Logs to stderr to avoid interfering with MCP stdio transport
 
 ### Tool Categories Architecture
 
@@ -186,19 +199,22 @@ Response formatting:
 
 ## Configuration
 
-The server loads configuration in this priority order:
+The server loads configuration using this approach:
 
-1. Path provided to constructor
-2. `./config.json`
-3. `./mssql-mcp-config.json`
-4. `MSSQL_MCP_CONFIG` environment variable path
-5. Environment variables (MSSQL_SERVER, MSSQL_DATABASE, etc.)
-6. Default configuration
+1. **Default Configuration** - Hardcoded in `getDefaultConfig()` (NKKE13399/database-edu-care-portal)
+2. **Environment Variables** - Overlay profiles using prefix patterns:
+   - `MSSQL_LOCAL_SERVER`, `MSSQL_LOCAL_DATABASE`, `MSSQL_LOCAL_USERNAME`, etc. → creates `local` profile
+   - `MSSQL_PROD_SERVER`, `MSSQL_PROD_DATABASE`, `MSSQL_PROD_USERNAME`, etc. → creates `prod` profile
+   - `MSSQL_DEV_SERVER`, `MSSQL_DEV_DATABASE`, `MSSQL_DEV_USERNAME`, etc. → creates `dev` profile
+
+**Important**: The current implementation does NOT load from `config.json` files. It only uses:
+- Hardcoded defaults in `config.ts`
+- Environment variables with the prefix pattern above
 
 Connection profiles support:
-- Different servers per environment (dev/staging/prod)
+- Multiple environments via environment variable prefixes
 - Separate credentials per profile
-- Environment-specific feature flags
+- Profile selection via `current_connection` setting
 
 ## Working with the Codebase
 
@@ -215,6 +231,15 @@ All code generation happens in `CodeGenTools`. Key methods:
 - `generateProperty()` - Single property with annotations
 - `generateNavigationProperties()` - Relationships from foreign keys
 - `mapSqlTypeToCSharp()` - Type mapping table (modify here for new types)
+
+### Changing Default Connection
+
+The hardcoded default connection in `config.ts:getDefaultConfig()` is:
+- Server: `NKKE13399`
+- Database: `database-edu-care-portal`
+- Auth: SQL (`local_user` / `local_user`)
+
+**To change**: Modify `getDefaultConfig()` method or use environment variables to override.
 
 ### Changing Query Safety
 
@@ -234,19 +259,37 @@ Most SQL Server queries are in the tool classes. Common patterns:
 
 Since this is an MCP server (stdio transport), testing requires:
 
-1. **Manual stdin/stdout test**:
-```bash
-node dist/index.js
-# Then send MCP protocol JSON messages via stdin
-```
+1. **Claude Desktop MCP Configuration**:
+   Edit `%APPDATA%\Claude\claude_desktop_config.json` (Windows) or `~/.config/claude/claude_desktop_config.json` (Unix):
+   ```json
+   {
+     "mcpServers": {
+       "mssql": {
+         "command": "node",
+         "args": ["C:\\absolute\\path\\to\\MS_SQL_MCP_Server\\dist\\index.js"],
+         "env": {
+           "MSSQL_LOCAL_SERVER": "localhost",
+           "MSSQL_LOCAL_DATABASE": "YourDatabase",
+           "MSSQL_LOCAL_AUTH": "sql",
+           "MSSQL_LOCAL_USERNAME": "user",
+           "MSSQL_LOCAL_PASSWORD": "pass"
+         }
+       }
+     }
+   }
+   ```
+   **Critical**: Must use absolute path to `dist/index.js`, not `src/index.ts`
 
-2. **Claude Code integration**:
-Configure in Claude Desktop config with absolute path to dist/index.js
+2. **Manual stdin/stdout test**:
+   ```bash
+   node dist/index.js
+   # Then send MCP protocol JSON messages via stdin
+   ```
 
 3. **Test database requirements**:
-- SQL Server 2016+ or Azure SQL Database
-- Read permissions on target databases
-- TCP/IP protocol enabled on port 1433
+   - SQL Server 2016+ or Azure SQL Database
+   - Read permissions on target databases
+   - TCP/IP protocol enabled on port 1433
 
 ## Known Implementation Details
 
@@ -258,9 +301,12 @@ Configure in Claude Desktop config with absolute path to dist/index.js
 
 ## Important Conventions
 
-- SQL identifiers always bracket-quoted: `[schema].[table]`
-- C# code uses 4-space indentation
-- Generated code includes XML documentation comments (`///`)
-- All async operations use async/await (no callbacks)
-- Connection pooling handled automatically by DatabaseManager
-- All tools require database parameter except server-level tools
+- **ES Modules**: Package uses `"type": "module"` - all imports must include `.js` extension (even for `.ts` files)
+- **SQL identifiers**: Always bracket-quoted: `[schema].[table]`
+- **C# code**: Uses 4-space indentation
+- **Generated code**: Includes XML documentation comments (`///`)
+- **Async operations**: All use async/await (no callbacks)
+- **Connection pooling**: Handled automatically by DatabaseManager
+- **Tool parameters**: All tools require database parameter except server-level tools
+- **Logging**: Use `Logger` from `logger.ts` for debugging; logs go to stderr
+- **Error messages**: Include specific details (table names, error types) for MCP client display
