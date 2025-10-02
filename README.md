@@ -245,15 +245,11 @@ Add environment variables to the MCP server configuration:
 }
 ```
 
-### Default Configuration
+### Configuration Requirement
 
-If no environment variables are set, the server uses a hardcoded default:
+**Important**: The server requires `MSSQL_LOCAL_*` environment variables to be configured. There are no hardcoded defaults.
 
-- **Server**: NKKE13399
-- **Database**: database-edu-care-portal
-- **Auth**: SQL (local_user / local_user)
-
-**Important**: Override this by setting environment variables before deploying.
+If you start the server without configuring the `local` connection profile, you will receive an error message with setup instructions.
 
 ## Project Structure
 

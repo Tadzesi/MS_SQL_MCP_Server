@@ -2,6 +2,48 @@
 
 All notable changes to the MS SQL MCP Server will be documented in this file.
 
+## [1.1.0] - 2025-10-02
+
+### Breaking Changes
+
+- **Configuration System Overhaul**: Removed config.json file support and hardcoded database connections
+- **Environment Variables Required**: All database connections must now be configured via environment variables with prefixes (`MSSQL_LOCAL_*`, `MSSQL_PROD_*`, `MSSQL_DEV_*`)
+- **Default Connection Changed**: Default connection profile changed from `default` to `local`
+- **Validation**: Server now requires `MSSQL_LOCAL_*` environment variables to be set or will fail with helpful error message
+
+### Added
+
+- **Connection Switching Tool**: New `mssql_switch_connection` tool to switch between connection profiles (local, prod, dev) at runtime
+- **Enhanced Development Workflow**: Added `concurrently` and `nodemon` to dev script for automatic TypeScript recompilation and server restart
+- **Environment-Based Configuration**: Automatic connection profile creation from environment variable prefixes
+- **Better Error Messages**: Configuration errors now provide clear, actionable instructions with example configuration
+
+### Changed
+
+- **Configuration Loading**: `ConfigManager` now loads connection profiles exclusively from environment variables
+- **Connection Profiles**: Support for multiple environments via `MSSQL_{PREFIX}_*` pattern (LOCAL, PROD, DEV)
+- **Documentation**: Complete rewrite of QUICKSTART.md with step-by-step setup instructions
+- **Documentation**: Enhanced README.md with environment variable configuration examples
+- **Documentation**: Updated CLAUDE.md with architecture details and configuration instructions
+
+### Removed
+
+- **Logging**: Removed Winston file-based logging from `index.ts` (now uses stderr only)
+- **Config Files**: Removed `config.example.json` and config.json support
+- **Test Files**: Removed `test-connection.js`, `test-mcp-input.json`, `test-mcp.cjs`
+- **Documentation**: Removed `IMPLEMENTATION_SUMMARY.md` (consolidated into other docs)
+- **Config Logging**: Removed automatic config file writing to `mssql-mcp-config.log`
+
+### Fixed
+
+- **Authentication Handling**: Improved Windows integrated auth and SQL auth configuration
+- **Connection Pooling**: Better connection string-based pool management
+
+### Security
+
+- **No Hardcoded Credentials**: All database credentials must be explicitly configured via environment variables
+- **Profile Validation**: Server validates required connection profile exists before starting
+
 ## [1.0.0] - 2025-09-30
 
 ### Initial Release

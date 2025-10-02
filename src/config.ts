@@ -17,6 +17,32 @@ export class ConfigManager {
     const envConnections = this.loadConnectionsFromEnv();
     config.connections = { ...config.connections, ...envConnections };
 
+    // Validate that 'local' connection exists (default connection)
+    if (!config.connections['local']) {
+      throw new Error(
+        `Configuration Error: No 'local' connection profile found.\n\n` +
+        `Please configure your database connection by setting environment variables in your Claude Desktop MCP configuration:\n\n` +
+        `{\n` +
+        `  "mcpServers": {\n` +
+        `    "mssql": {\n` +
+        `      "command": "node",\n` +
+        `      "args": ["path/to/MS_SQL_MCP_Server/dist/index.js"],\n` +
+        `      "env": {\n` +
+        `        "MSSQL_LOCAL_SERVER": "localhost",\n` +
+        `        "MSSQL_LOCAL_DATABASE": "YourDatabase",\n` +
+        `        "MSSQL_LOCAL_AUTH": "sql",\n` +
+        `        "MSSQL_LOCAL_USERNAME": "your_username",\n` +
+        `        "MSSQL_LOCAL_PASSWORD": "your_password"\n` +
+        `      }\n` +
+        `    }\n` +
+        `  }\n` +
+        `}\n\n` +
+        `Required: MSSQL_LOCAL_SERVER and MSSQL_LOCAL_DATABASE\n` +
+        `For SQL auth: MSSQL_LOCAL_USERNAME and MSSQL_LOCAL_PASSWORD\n` +
+        `For Windows auth: Set MSSQL_LOCAL_AUTH="integrated"`
+      );
+    }
+
     console.error(`Loaded ${Object.keys(config.connections).length} connection profile(s)`);
     return config;
   }
@@ -50,20 +76,7 @@ export class ConfigManager {
 
   private getDefaultConfig(): ServerConfig {
     return {
-      connections: {
-        default: {
-          server: 'NKKE13399',
-          database: 'database-edu-care-portal',
-          authentication: 'sql',
-          username: 'local_user',
-          password: 'local_user',
-          readonly: true,
-          environment: 'development',
-          port: 1433,
-          encrypt: false,
-          trustServerCertificate: true
-        }
-      },
+      connections: {},
       limits: {
         max_rows: 10000,
         query_timeout_seconds: 30,
@@ -81,7 +94,7 @@ export class ConfigManager {
         enable_cross_database_queries: true,
         enable_schema_comparison: true
       },
-      current_connection: 'default'
+      current_connection: 'local'
     };
   }
 

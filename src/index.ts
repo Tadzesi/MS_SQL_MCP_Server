@@ -109,14 +109,14 @@ class MsSqlMcpServer {
       },
       {
         name: 'mssql_switch_connection',
-        description: 'Switch to a different SQL Server connection profile (local, prod, dev, or default)',
+        description: 'Switch to a different SQL Server connection profile (local, prod, or dev). Default profile is "local".',
         inputSchema: {
           type: 'object',
           properties: {
             environment: {
               type: 'string',
-              description: 'Connection profile name (local, prod, dev, or default)',
-              enum: ['local', 'prod', 'dev', 'default']
+              description: 'Connection profile name (local, prod, or dev)',
+              enum: ['local', 'prod', 'dev']
             }
           },
           required: ['environment']

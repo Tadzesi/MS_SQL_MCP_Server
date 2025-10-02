@@ -69,7 +69,8 @@ Tool Categories (tools/*)
 - `ConfigManager` class manages configuration
 - Environment variable loading: Uses `MSSQL_LOCAL_*`, `MSSQL_PROD_*`, `MSSQL_DEV_*` prefixes
 - Creates connection profiles automatically (local/prod/dev keys)
-- Default hardcoded connection: NKKE13399/database-edu-care-portal (SQL auth)
+- **No hardcoded defaults** - requires `MSSQL_LOCAL_*` environment variables
+- Default connection profile: `local`
 - Configuration schema in `types.ts`
 
 **database.ts** (165 lines)
@@ -201,15 +202,17 @@ Response formatting:
 
 The server loads configuration using this approach:
 
-1. **Default Configuration** - Hardcoded in `getDefaultConfig()` (NKKE13399/database-edu-care-portal)
-2. **Environment Variables** - Overlay profiles using prefix patterns:
+1. **Application Defaults** - `getDefaultConfig()` provides limits, code_generation settings, and feature flags
+2. **Environment Variables** - Connection profiles loaded from prefix patterns:
    - `MSSQL_LOCAL_SERVER`, `MSSQL_LOCAL_DATABASE`, `MSSQL_LOCAL_USERNAME`, etc. → creates `local` profile
    - `MSSQL_PROD_SERVER`, `MSSQL_PROD_DATABASE`, `MSSQL_PROD_USERNAME`, etc. → creates `prod` profile
    - `MSSQL_DEV_SERVER`, `MSSQL_DEV_DATABASE`, `MSSQL_DEV_USERNAME`, etc. → creates `dev` profile
 
-**Important**: The current implementation does NOT load from `config.json` files. It only uses:
-- Hardcoded defaults in `config.ts`
-- Environment variables with the prefix pattern above
+**Important**:
+- Does NOT load from `config.json` files
+- Does NOT have hardcoded database connection defaults
+- **Requires** `MSSQL_LOCAL_*` environment variables to be set
+- If `local` profile is missing, throws error with configuration instructions
 
 Connection profiles support:
 - Multiple environments via environment variable prefixes
@@ -232,14 +235,18 @@ All code generation happens in `CodeGenTools`. Key methods:
 - `generateNavigationProperties()` - Relationships from foreign keys
 - `mapSqlTypeToCSharp()` - Type mapping table (modify here for new types)
 
-### Changing Default Connection
+### Configuring Database Connections
 
-The hardcoded default connection in `config.ts:getDefaultConfig()` is:
-- Server: `NKKE13399`
-- Database: `database-edu-care-portal`
-- Auth: SQL (`local_user` / `local_user`)
+There are no hardcoded database connections in the code. All connections must be configured via environment variables.
 
-**To change**: Modify `getDefaultConfig()` method or use environment variables to override.
+**Default connection profile**: `local` (from `MSSQL_LOCAL_*` environment variables)
+
+**To configure**: Set environment variables in Claude Desktop MCP configuration:
+- Required: `MSSQL_LOCAL_SERVER`, `MSSQL_LOCAL_DATABASE`
+- For SQL auth: `MSSQL_LOCAL_USERNAME`, `MSSQL_LOCAL_PASSWORD`
+- For Windows auth: `MSSQL_LOCAL_AUTH=integrated`
+
+If `local` profile is not configured, the server will fail to start with a helpful error message.
 
 ### Changing Query Safety
 
