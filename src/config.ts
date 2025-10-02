@@ -1,4 +1,3 @@
-import { writeFileSync } from 'fs';
 import { ServerConfig } from './types.js';
 
 /**
@@ -12,57 +11,72 @@ export class ConfigManager {
   }
 
   private loadConfig(configPath?: string): ServerConfig {
-    // Always use default configuration
-    console.error('Using default configuration');
     const config = this.getDefaultConfig();
-    const configSource = 'default';
-    this.writeConfigToLog(config, configSource);
+
+    // Load connection profiles from environment variables
+    const envConnections = this.loadConnectionsFromEnv();
+    config.connections = { ...config.connections, ...envConnections };
+
+    // Validate that 'local' connection exists (default connection)
+    if (!config.connections['local']) {
+      throw new Error(
+        `Configuration Error: No 'local' connection profile found.\n\n` +
+        `Please configure your database connection by setting environment variables in your Claude Desktop MCP configuration:\n\n` +
+        `{\n` +
+        `  "mcpServers": {\n` +
+        `    "mssql": {\n` +
+        `      "command": "node",\n` +
+        `      "args": ["path/to/MS_SQL_MCP_Server/dist/index.js"],\n` +
+        `      "env": {\n` +
+        `        "MSSQL_LOCAL_SERVER": "localhost",\n` +
+        `        "MSSQL_LOCAL_DATABASE": "YourDatabase",\n` +
+        `        "MSSQL_LOCAL_AUTH": "sql",\n` +
+        `        "MSSQL_LOCAL_USERNAME": "your_username",\n` +
+        `        "MSSQL_LOCAL_PASSWORD": "your_password"\n` +
+        `      }\n` +
+        `    }\n` +
+        `  }\n` +
+        `}\n\n` +
+        `Required: MSSQL_LOCAL_SERVER and MSSQL_LOCAL_DATABASE\n` +
+        `For SQL auth: MSSQL_LOCAL_USERNAME and MSSQL_LOCAL_PASSWORD\n` +
+        `For Windows auth: Set MSSQL_LOCAL_AUTH="integrated"`
+      );
+    }
+
+    console.error(`Loaded ${Object.keys(config.connections).length} connection profile(s)`);
     return config;
   }
 
-  private writeConfigToLog(config: ServerConfig, source: string): void {
-    try {
-      const sanitizedConfig = this.sanitizeConfig(config);
-      const logEntry = {
-        timestamp: new Date().toISOString(),
-        source: source,
-        config: sanitizedConfig
-      };
-      const logContent = JSON.stringify(logEntry, null, 2);
-      writeFileSync('mssql-mcp-config.log', logContent, 'utf-8');
-      console.error('Configuration written to mssql-mcp-config.log');
-    } catch (error) {
-      console.error('Failed to write config to log file:', error);
-    }
-  }
+  private loadConnectionsFromEnv(): Record<string, any> {
+    const connections: Record<string, any> = {};
+    const envPrefixes = ['LOCAL', 'PROD', 'DEV'];
 
-  private sanitizeConfig(config: ServerConfig): any {
-    const sanitized = JSON.parse(JSON.stringify(config));
-    // Mask passwords in all connections
-    for (const connName in sanitized.connections) {
-      if (sanitized.connections[connName].password) {
-        sanitized.connections[connName].password = '***REDACTED***';
+    for (const prefix of envPrefixes) {
+      const server = process.env[`MSSQL_${prefix}_SERVER`];
+      if (server) {
+        const connKey = prefix.toLowerCase();
+        connections[connKey] = {
+          server,
+          database: process.env[`MSSQL_${prefix}_DATABASE`] || '',
+          authentication: (process.env[`MSSQL_${prefix}_AUTH`] || 'sql') as 'integrated' | 'sql',
+          username: process.env[`MSSQL_${prefix}_USERNAME`],
+          password: process.env[`MSSQL_${prefix}_PASSWORD`],
+          readonly: process.env[`MSSQL_${prefix}_READONLY`] !== 'false',
+          environment: connKey as 'development' | 'staging' | 'production',
+          port: parseInt(process.env[`MSSQL_${prefix}_PORT`] || '1433'),
+          encrypt: process.env[`MSSQL_${prefix}_ENCRYPT`] === 'true',
+          trustServerCertificate: process.env[`MSSQL_${prefix}_TRUST_CERT`] !== 'false'
+        };
+        console.error(`Loaded ${connKey} connection profile from environment variables`);
       }
     }
-    return sanitized;
+
+    return connections;
   }
 
   private getDefaultConfig(): ServerConfig {
     return {
-      connections: {
-        default: {
-          server: 'NKKE13399',
-          database: 'database-edu-care-portal',
-          authentication: 'sql',
-          username: 'local_user',
-          password: 'local_user',
-          readonly: true,
-          environment: 'development',
-          port: 1433,
-          encrypt: false,
-          trustServerCertificate: true
-        }
-      },
+      connections: {},
       limits: {
         max_rows: 10000,
         query_timeout_seconds: 30,
@@ -80,7 +94,7 @@ export class ConfigManager {
         enable_cross_database_queries: true,
         enable_schema_comparison: true
       },
-      current_connection: 'default'
+      current_connection: 'local'
     };
   }
 

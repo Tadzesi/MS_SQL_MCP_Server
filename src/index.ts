@@ -8,7 +8,6 @@ import {
   Tool
 } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import winston from 'winston';
 
 import { ConfigManager } from './config.js';
 import { DatabaseManager } from './database.js';
@@ -35,24 +34,8 @@ class MsSqlMcpServer {
   private codeGenTools: CodeGenTools;
   private documentationTools: DocumentationTools;
   private comparisonTools: ComparisonTools;
-  private logger: winston.Logger;
 
   constructor() {
-    // Initialize logger
-    this.logger = winston.createLogger({
-      level: 'info',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      ),
-      transports: [
-        new winston.transports.File({
-          filename: 'C:\\Users\\mhorny\\mssql-mcp-server.log'
-        })
-      ]
-    });
-    this.logger.info('Initializing MS SQL MCP Server');
-
     this.server = new Server(
       {
         name: 'mssql-mcp-server',
@@ -99,12 +82,6 @@ class MsSqlMcpServer {
 
         return await this.handleToolCall(request.params.name, request.params.arguments, pool);
       } catch (error: any) {
-        this.logger.error('Error handling tool call', {
-          error: error.message || 'Unknown error',
-          stack: error.stack,
-          tool: request.params.name,
-          args: request.params.arguments
-        });
         return {
           content: [
             {
@@ -128,6 +105,21 @@ class MsSqlMcpServer {
           type: 'object',
           properties: {},
           required: []
+        }
+      },
+      {
+        name: 'mssql_switch_connection',
+        description: 'Switch to a different SQL Server connection profile (local, prod, or dev). Default profile is "local".',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            environment: {
+              type: 'string',
+              description: 'Connection profile name (local, prod, or dev)',
+              enum: ['local', 'prod', 'dev']
+            }
+          },
+          required: ['environment']
         }
       },
 
@@ -608,7 +600,6 @@ class MsSqlMcpServer {
   }
 
   private async handleToolCall(name: string, args: any, pool: any): Promise<any> {
-    this.logger.info(`Tool called: ${name}`, { args });
     const limits = this.configManager.getConfig().limits;
 
     switch (name) {
@@ -661,6 +652,33 @@ class MsSqlMcpServer {
         };
 
         return this.formatResponse(result);
+      }
+
+      case 'mssql_switch_connection': {
+        const environment = args.environment;
+
+        try {
+          this.configManager.setCurrentConnection(environment);
+          const newConfig = this.configManager.getCurrentConnection();
+
+          return this.formatResponse({
+            success: true,
+            message: `Switched to '${environment}' connection`,
+            connection: {
+              server: newConfig.server,
+              database: newConfig.database,
+              environment: newConfig.environment
+            }
+          });
+        } catch (error: any) {
+          return {
+            content: [{
+              type: 'text',
+              text: `Failed to switch connection: ${error.message}`
+            }],
+            isError: true
+          };
+        }
       }
 
       // Schema Inspection
@@ -958,7 +976,6 @@ class MsSqlMcpServer {
   async start() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    this.logger.info('MS SQL MCP Server running on stdio');
     console.error('MS SQL MCP Server running on stdio');
   }
 }

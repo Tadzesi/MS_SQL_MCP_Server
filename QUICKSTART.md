@@ -1,76 +1,208 @@
 # Quick Start Guide
 
-## Installation
+Get your MS SQL MCP Server running with Claude Desktop in under 5 minutes!
 
-1. **Install dependencies:**
+## Prerequisites
+
+- Node.js 18+ installed
+- SQL Server 2016+ or Azure SQL Database running
+- Claude Desktop installed
+- Read access to your SQL Server database
+
+## Step 1: Install and Build
+
 ```bash
+# Clone or navigate to the project directory
+cd MS_SQL_MCP_Server
+
+# Install dependencies
 npm install
-```
 
-2. **Build the project:**
-```bash
+# Build TypeScript to JavaScript
 npm run build
 ```
 
-## Configuration
+## Step 2: Configure Claude Desktop
 
-### Option 1: Environment Variables (Easiest)
+Edit your Claude Desktop MCP configuration file:
 
-Set these environment variables:
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+**macOS/Linux:** `~/.config/claude/claude_desktop_config.json`
 
-```bash
-# Windows (PowerShell)
-$env:MSSQL_SERVER="localhost"
-$env:MSSQL_DATABASE="master"
-$env:MSSQL_AUTH="integrated"
-
-# Windows (CMD)
-set MSSQL_SERVER=localhost
-set MSSQL_DATABASE=master
-set MSSQL_AUTH=integrated
-
-# Linux/macOS
-export MSSQL_SERVER="localhost"
-export MSSQL_DATABASE="master"
-export MSSQL_AUTH="integrated"
-```
-
-### Option 2: Configuration File
-
-Create `config.json`:
+### For SQL Server Authentication (Recommended)
 
 ```json
 {
-  "connections": {
-    "default": {
-      "server": "localhost",
-      "database": "master",
-      "authentication": "integrated",
-      "readonly": true,
-      "environment": "development"
+  "mcpServers": {
+    "mssql": {
+      "command": "node",
+      "args": ["C:\\absolute\\path\\to\\MS_SQL_MCP_Server\\dist\\index.js"],
+      "env": {
+        "MSSQL_LOCAL_SERVER": "localhost",
+        "MSSQL_LOCAL_DATABASE": "YourDatabase",
+        "MSSQL_LOCAL_AUTH": "sql",
+        "MSSQL_LOCAL_USERNAME": "your_username",
+        "MSSQL_LOCAL_PASSWORD": "your_password"
+      }
     }
-  },
-  "current_connection": "default"
+  }
 }
 ```
 
-## Testing
+### For Windows Integrated Authentication
 
-Test the server manually:
+```json
+{
+  "mcpServers": {
+    "mssql": {
+      "command": "node",
+      "args": ["C:\\absolute\\path\\to\\MS_SQL_MCP_Server\\dist\\index.js"],
+      "env": {
+        "MSSQL_LOCAL_SERVER": "localhost",
+        "MSSQL_LOCAL_DATABASE": "YourDatabase",
+        "MSSQL_LOCAL_AUTH": "integrated"
+      }
+    }
+  }
+}
+```
 
+**⚠️ Important:**
+- Replace `C:\\absolute\\path\\to\\MS_SQL_MCP_Server\\dist\\index.js` with your actual absolute path
+- Use double backslashes (`\\`) or forward slashes (`/`) in Windows paths
+- Point to `dist/index.js` (compiled), not `src/index.ts`
+
+## Step 3: Restart Claude Desktop
+
+Close and reopen Claude Desktop to load the MCP server.
+
+## Step 4: Verify It Works
+
+Open Claude Desktop and try these commands:
+
+```
+List all databases on the server
+```
+
+Claude should respond with a list of your databases using the `mssql_list_databases` tool.
+
+```
+Show me all tables in the [YourDatabase] database
+```
+
+You should see a list of tables in your database.
+
+If you see database information, congratulations! Your MCP server is working! 🎉
+
+## What You Can Do Now
+
+Once your MCP server is connected, you can use natural language to:
+
+### 🔍 Explore Your Database
+```
+Show me all tables in the Sales database
+Describe the structure of the Orders table
+What are the foreign keys in the Customers table?
+```
+
+### 💻 Generate Entity Framework Code
+```
+Generate a C# entity class for the Products table with navigation properties
+Create a DbContext for the Sales database using Fluent API
+Generate Create, Update, and Read DTOs for the Orders table
+```
+
+### ⚡ Analyze Performance
+```
+Show me all queries running longer than 10 seconds
+What indexes are missing on the Orders table?
+Are there any blocking queries right now?
+```
+
+### 📊 Profile Data
+```
+Show me 10 sample rows from the Customers table
+What's the distribution of values in the Status column?
+Check for data quality issues in the Orders table
+```
+
+### 📝 Generate Documentation
+```
+Create a data dictionary for the Sales database in Markdown
+Generate an ER diagram in Mermaid format
+Document the sp_ProcessOrders stored procedure
+```
+
+## Troubleshooting
+
+### MCP Server Not Appearing in Claude
+
+**Check the configuration:**
+1. Verify the path in `claude_desktop_config.json` is absolute and points to `dist/index.js`
+2. Make sure you used double backslashes (`\\`) or forward slashes (`/`) in Windows paths
+3. Restart Claude Desktop after any config changes
+
+**Test the server manually:**
 ```bash
 node dist/index.js
 ```
+The server should start and wait for input. Press Ctrl+C to exit.
 
-The server will start and wait for MCP protocol messages on stdin/stdout.
+### Cannot Connect to SQL Server
 
-## Integration with Claude Code
+**Verify SQL Server is accessible:**
+```bash
+# Test with sqlcmd (if installed)
+sqlcmd -S localhost -U your_username -P your_password -Q "SELECT @@VERSION"
 
-Add to Claude Code configuration:
+# Or for Windows Auth
+sqlcmd -S localhost -E -Q "SELECT @@VERSION"
+```
 
-**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+**Common issues:**
+- ❌ SQL Server not running → ✅ Start SQL Server service
+- ❌ Port 1433 blocked → ✅ Check firewall settings
+- ❌ TCP/IP disabled → ✅ Enable in SQL Server Configuration Manager
+- ❌ Wrong server name → ✅ Use `localhost`, `.\SQLEXPRESS`, or actual server name
 
-**macOS/Linux:** `~/.config/claude/claude_desktop_config.json`
+### Authentication Errors
+
+**For SQL Authentication:**
+- Verify SQL Server authentication is enabled (not Windows-only mode)
+- Check username and password in your configuration
+- Ensure the user exists: `SELECT name FROM sys.sql_logins WHERE name = 'your_username'`
+
+**For Windows Authentication:**
+- The Windows user running Claude Desktop must have SQL Server access
+- Verify you can connect with SSMS using Windows Auth first
+
+### Permission Errors
+
+Grant minimum read-only permissions:
+
+```sql
+-- Server-level permissions
+USE master;
+GRANT VIEW ANY DATABASE TO [your_username];
+GRANT VIEW ANY DEFINITION TO [your_username];
+GRANT VIEW DATABASE STATE TO [your_username];
+GRANT VIEW SERVER STATE TO [your_username];
+
+-- Database-level permissions
+USE YourDatabase;
+GRANT SELECT TO [your_username];
+```
+
+### Getting "ECONNREFUSED" Error
+
+This means the server hostname/port is wrong:
+1. Check `MSSQL_LOCAL_SERVER` is correct (e.g., `localhost`, `.\SQLEXPRESS`, or IP address)
+2. Verify SQL Server is listening on port 1433 (or specify custom port with `MSSQL_LOCAL_PORT`)
+3. For named instances, use format: `SERVER\INSTANCENAME`
+
+## Advanced: Multiple Connection Profiles
+
+You can configure multiple SQL Server environments (local, dev, prod) in one configuration:
 
 ```json
 {
@@ -79,96 +211,68 @@ Add to Claude Code configuration:
       "command": "node",
       "args": ["C:\\path\\to\\MS_SQL_MCP_Server\\dist\\index.js"],
       "env": {
-        "MSSQL_SERVER": "localhost",
-        "MSSQL_DATABASE": "master",
-        "MSSQL_AUTH": "integrated"
+        "MSSQL_LOCAL_SERVER": "localhost",
+        "MSSQL_LOCAL_DATABASE": "LocalDB",
+        "MSSQL_LOCAL_AUTH": "integrated",
+
+        "MSSQL_DEV_SERVER": "dev-sql-server",
+        "MSSQL_DEV_DATABASE": "DevDatabase",
+        "MSSQL_DEV_AUTH": "sql",
+        "MSSQL_DEV_USERNAME": "dev_user",
+        "MSSQL_DEV_PASSWORD": "dev_password",
+
+        "MSSQL_PROD_SERVER": "prod-sql-server",
+        "MSSQL_PROD_DATABASE": "ProdDatabase",
+        "MSSQL_PROD_AUTH": "sql",
+        "MSSQL_PROD_USERNAME": "readonly_user",
+        "MSSQL_PROD_PASSWORD": "readonly_password"
       }
     }
   }
 }
 ```
 
-**Important:** Use absolute path to dist/index.js!
-
-## Verify Installation
-
-After restarting Claude Code, ask:
-
+Then switch connections in Claude:
 ```
-List all databases on the SQL Server
+Switch to the dev connection
+Switch to the prod connection
+Switch to the local connection
 ```
 
-Claude should use the `mssql_list_databases` tool.
+## Security & Limitations
 
-## Example Usage
+✅ **Built-in Safety:**
+- **Read-only by default** - No INSERT/UPDATE/DELETE/DROP allowed
+- **Query validation** - Blocks dangerous SQL operations
+- **Row limits** - Maximum 10,000 rows per query
+- **Timeouts** - 30-second query timeout prevents runaway queries
 
-### Explore Database
-```
-Show me all tables in the AdventureWorks database
-```
-
-### Generate Code
-```
-Generate a C# entity class for the Person.Person table with navigation properties
-```
-
-### Analyze Performance
-```
-Find missing indexes in the Sales.SalesOrderHeader table
-```
-
-### Create Documentation
-```
-Generate a data dictionary for the Sales schema
-```
-
-## Troubleshooting
-
-### Connection Failed
-
-1. Verify SQL Server is running
-2. Check firewall allows port 1433
-3. Confirm authentication method matches server configuration
-4. Test with SQL Server Management Studio first
-
-### Permission Denied
-
-Grant minimum required permissions:
-
-```sql
--- Grant server-level permissions
-GRANT VIEW ANY DATABASE TO [YourUser];
-GRANT VIEW ANY DEFINITION TO [YourUser];
-GRANT VIEW SERVER STATE TO [YourUser];
-
--- Grant database-level permissions
-USE YourDatabase;
-GRANT SELECT TO [YourUser];
-```
-
-### Windows Authentication Not Working
-
-- Ensure SQL Server allows Windows authentication
-- Run Claude Code as user with database access
-- Check domain/workgroup settings
-
-### SQL Authentication Not Working
-
-- Verify SQL Server authentication is enabled
-- Check mixed mode authentication in SQL Server
-- Confirm username and password are correct
+⚠️ **Best Practices:**
+- Use dedicated read-only SQL accounts
+- Grant only minimum required permissions (SELECT, VIEW DEFINITION)
+- Test on development databases first
+- Review all generated code before using in production
 
 ## Next Steps
 
-1. Review [README.md](README.md) for full documentation
-2. Check [Documentation/MS_SQL_MCP_Server-Functionality_Specification.md](Documentation/MS_SQL_MCP_Server-Functionality_Specification.md) for all 38 tools
-3. Explore example prompts in README
-4. Configure multiple connection profiles for dev/staging/prod
+📖 **Learn More:**
+- [README.md](README.md) - Full documentation and usage examples
+- [CLAUDE.md](CLAUDE.md) - Architecture and development guide
+- [Functional Specification](Documentation/MS_SQL_MCP_Server-Functionality_Specification.md) - Details on all 38 tools
 
-## Security Notes
+🚀 **Start Using:**
+- Explore your database schema
+- Generate Entity Framework code
+- Analyze query performance
+- Create database documentation
+- Compare schemas across environments
 
-- Server is **read-only by default**
-- No write operations allowed
-- Query results limited to 10,000 rows
-- 30-second query timeout
-- Use dedicated read-only SQL accounts in production
+## Getting Help
+
+If you encounter issues:
+1. Check the troubleshooting section above
+2. Review Claude Desktop logs for error messages
+3. Test SQL Server connection with `sqlcmd` or SSMS
+4. Verify permissions with the SQL commands provided
+
+Happy exploring! 🎉
