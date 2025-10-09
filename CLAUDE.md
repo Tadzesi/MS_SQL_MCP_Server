@@ -58,14 +58,14 @@ Tool Categories (tools/*)
 
 ### Core Components
 
-**index.ts** (570 lines)
+**index.ts** (987 lines)
 - MCP server implementation using `@modelcontextprotocol/sdk`
 - Registers all 38 tools with the MCP protocol
 - Routes tool calls to appropriate tool modules
 - Handles request/response formatting for MCP
 - Main entry point: `MsSqlMcpServer` class
 
-**config.ts** (115 lines)
+**config.ts** (127 lines)
 - `ConfigManager` class manages configuration
 - Environment variable loading: Uses `MSSQL_LOCAL_*`, `MSSQL_PROD_*`, `MSSQL_DEV_*` prefixes
 - Creates connection profiles automatically (local/prod/dev keys)
@@ -73,10 +73,10 @@ Tool Categories (tools/*)
 - Default connection profile: `local`
 - Configuration schema in `types.ts`
 
-**database.ts** (165 lines)
+**database.ts** (158 lines)
 - `DatabaseManager` class handles SQL Server connections
 - Connection pooling with automatic lifecycle management via Map keyed by connection string
-- **Authentication Handling**: SQL auth uses `user`/`password` properties directly; Windows auth uses `authentication.type='ntlm'` object
+- **Authentication Handling**: SQL auth sets `user`/`password` directly; Windows auth relies on current user session (no explicit credentials)
 - **Critical**: `validateReadOnlyQuery()` enforces security by blocking write operations
 - Two execution patterns:
   - `executeQuery()` - returns full result sets
@@ -90,36 +90,36 @@ Tool Categories (tools/*)
 
 Each tool category is a separate class that receives `DatabaseManager` as dependency:
 
-**SchemaTools** (440 lines)
+**SchemaTools** (467 lines)
 - Primary queries use system catalog views: `sys.tables`, `sys.columns`, `sys.indexes`, `sys.foreign_keys`
 - Key method: `describeTable()` - orchestrates 7 sub-queries to build complete table metadata
 - Uses `STUFF...FOR XML PATH('')` pattern to aggregate column lists
 
-**QueryTools** (180 lines)
+**QueryTools** (229 lines)
 - Critical: `addRowLimit()` injects TOP clause into SELECT queries for safety
 - Note: Execution plan viewing is simplified - full plans require SSMS
 
-**CodeGenTools** (590 lines)
+**CodeGenTools** (517 lines)
 - Most complex module - generates C# code from database schema
 - `mapSqlTypeToCSharp()` - handles all SQL Server to C# type mappings
 - `toPascalCase()` - converts SQL naming to C# conventions
 - Each generation method returns formatted C# code strings
 - Supports Data Annotations and Fluent API styles
 
-**PerformanceTools** (180 lines)
+**PerformanceTools** (196 lines)
 - Queries DMVs: `sys.dm_exec_requests`, `sys.dm_exec_query_stats`, `sys.dm_db_index_usage_stats`
 - `getWaitStatistics()` filters out noise waits for actionable results
 
-**ProfilingTools** (140 lines)
+**ProfilingTools** (222 lines)
 - Uses COUNT DISTINCT and GROUP BY for statistical analysis
 - `checkDataQuality()` uses dynamic SQL to check multiple columns
 
-**DocumentationTools** (280 lines)
+**DocumentationTools** (313 lines)
 - Generates Markdown by default
 - `generateMermaidDiagram()` creates ER diagrams in Mermaid syntax
 - Iterates over schema metadata to build comprehensive docs
 
-**ComparisonTools** (200 lines)
+**ComparisonTools** (271 lines)
 - `compareSchemas()` performs set operations on schema metadata
 - `generateSyncScript()` creates T-SQL but recommends review before execution
 
@@ -161,7 +161,7 @@ Key generation methods:
 
 ## Type System
 
-All types defined in `types.ts` (230 lines):
+All types defined in `types.ts` (238 lines):
 
 **Configuration Types**:
 - `ServerConfig` - Root configuration object
@@ -285,7 +285,9 @@ Since this is an MCP server (stdio transport), testing requires:
      }
    }
    ```
-   **Critical**: Must use absolute path to `dist/index.js`, not `src/index.ts`
+   **Critical**:
+   - Must use absolute path to `dist/index.js`, not `src/index.ts`
+   - **Must restart Claude Desktop** after any configuration changes for them to take effect
 
 2. **Manual stdin/stdout test**:
    ```bash
@@ -300,6 +302,7 @@ Since this is an MCP server (stdio transport), testing requires:
 
 ## Known Implementation Details
 
+- **Windows Authentication Limitation**: The `mssql` package (tedious driver) does not support true Windows SSPI authentication like native SQL Server tools. Windows auth relies on the current user's session credentials and cannot use explicit username/password. **SQL Server Authentication is recommended** for cross-platform compatibility.
 - **Execution Plans**: `explainQuery()` returns simplified guidance due to mssql driver limitations. Full plans need SSMS.
 - **Dynamic SQL**: Some profiling queries use dynamic SQL which may require elevated permissions.
 - **Connection Pooling**: Pools are kept in memory map by connection string. Not cleaned up until server shutdown.

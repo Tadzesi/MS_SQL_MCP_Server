@@ -2,6 +2,26 @@
 
 All notable changes to the MS SQL MCP Server will be documented in this file.
 
+## [1.1.1] - 2025-10-09 (In Progress)
+
+### Added
+
+- **Windows Domain Support**: Added `MSSQL_{PREFIX}_DOMAIN` environment variable for Windows authentication
+- **Auto-Detection**: Automatic detection of Windows domain from `USERDOMAIN` environment variable
+- **Auto-Detection**: Automatic detection of Windows username from `USERNAME` environment variable
+- **Documentation**: Added `CONNECTION_SOLUTION.md` documenting authentication troubleshooting and solutions
+
+### Changed
+
+- **Windows Authentication**: Improved NTLM authentication with explicit domain and username configuration
+- **Authentication Logging**: Enhanced debug logging for Windows integrated authentication troubleshooting
+- **Windows Session Auth**: Windows integrated auth now supports current session credentials with empty password
+
+### Fixed
+
+- **Windows Authentication**: Fixed Windows integrated authentication by properly configuring NTLM with domain/username detection
+- **Type Definitions**: Added `domain` field to `ConnectionConfig` interface for Windows authentication
+
 ## [1.1.0] - 2025-10-02
 
 ### Breaking Changes

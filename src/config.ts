@@ -61,6 +61,7 @@ export class ConfigManager {
           authentication: (process.env[`MSSQL_${prefix}_AUTH`] || 'sql') as 'integrated' | 'sql',
           username: process.env[`MSSQL_${prefix}_USERNAME`],
           password: process.env[`MSSQL_${prefix}_PASSWORD`],
+          domain: process.env[`MSSQL_${prefix}_DOMAIN`],
           readonly: process.env[`MSSQL_${prefix}_READONLY`] !== 'false',
           environment: connKey as 'development' | 'staging' | 'production',
           port: parseInt(process.env[`MSSQL_${prefix}_PORT`] || '1433'),

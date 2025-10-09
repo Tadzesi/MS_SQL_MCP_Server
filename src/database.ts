@@ -53,14 +53,21 @@ export class DatabaseManager {
       config.user = connectionConfig.username;
       config.password = connectionConfig.password;
     } else {
-      // Windows integrated authentication
-      Logger.info('Using Windows integrated authentication');
+      // Windows integrated authentication using NTLM
+      Logger.info('Using Windows integrated authentication (NTLM)');
+      // Use NTLM authentication with current Windows user credentials
+      // Get domain and username from environment if not provided
+      const domain = connectionConfig.domain || process.env.USERDOMAIN || '';
+      const username = connectionConfig.username || process.env.USERNAME || '';
+
+      Logger.debug(`NTLM - Domain: ${domain}, Username: ${username}`);
+
       config.authentication = {
         type: 'ntlm',
         options: {
-          domain: '',
-          userName: connectionConfig.username || '',
-          password: connectionConfig.password || ''
+          domain: domain,
+          userName: username,
+          password: connectionConfig.password || '' // Empty password to use current session
         }
       };
     }
