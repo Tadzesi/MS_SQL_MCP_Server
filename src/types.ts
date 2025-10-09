@@ -8,6 +8,7 @@ export interface ConnectionConfig {
   authentication: 'integrated' | 'sql';
   username?: string;
   password?: string;
+  domain?: string;
   readonly: boolean;
   environment: 'development' | 'staging' | 'production';
   port?: number;

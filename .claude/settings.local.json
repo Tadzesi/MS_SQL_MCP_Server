@@ -10,7 +10,14 @@
       "Bash(npm install:*)",
       "Bash(git push:*)",
       "Bash(del:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "mcp__mssql__mssql_show_connection_config",
+      "mcp__mssql__mssql_list_databases",
+      "Bash(find:*)",
+      "mcp__mssql__mssql_list_tables",
+      "mcp__mssql__mssql_index_usage",
+      "mcp__mssql__mssql_get_relationships",
+      "mcp__mssql__mssql_generate_er_diagram"
     ],
     "deny": [],
     "ask": []
