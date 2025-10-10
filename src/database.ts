@@ -1,4 +1,3 @@
-import sql from 'mssql';
 import { ConnectionConfig } from './types.js';
 import { Logger } from './logger.js';
 
@@ -7,6 +6,10 @@ type SqlConfig = any;
 
 /**
  * Database connection manager with pooling support
+ *
+ * IMPORTANT: Supports two authentication methods:
+ * 1. SQL Server Authentication - Uses standard mssql package (tedious driver)
+ * 2. Windows Integrated Authentication - Uses msnodesqlv8 driver
  */
 export class DatabaseManager {
   private pools: Map<string, ConnectionPool> = new Map();
@@ -20,6 +23,17 @@ export class DatabaseManager {
       return pool;
     }
 
+    // Dynamically import the correct driver based on authentication type
+    let sql: any;
+    if (connectionConfig.authentication === 'integrated') {
+      Logger.info('Loading msnodesqlv8 driver for Windows authentication');
+      // @ts-ignore - mssql/msnodesqlv8 doesn't have type declarations
+      sql = await import('mssql/msnodesqlv8.js');
+    } else {
+      Logger.info('Loading tedious driver for SQL Server authentication');
+      sql = await import('mssql');
+    }
+
     // Create new connection pool
     const config: SqlConfig = {
       server: connectionConfig.server,
@@ -28,7 +42,6 @@ export class DatabaseManager {
         encrypt: connectionConfig.encrypt ?? false,
         trustServerCertificate: connectionConfig.trustServerCertificate ?? true,
         enableArithAbort: true,
-        readOnlyIntent: connectionConfig.readonly,
         instanceName: connectionConfig.server.includes('\\') ? connectionConfig.server.split('\\')[1] : undefined
       },
       pool: {
@@ -42,44 +55,71 @@ export class DatabaseManager {
 
     // Add authentication
     Logger.debug(`Authentication type: ${connectionConfig.authentication}`);
-    Logger.debug(`Username: ${connectionConfig.username || 'integrated'}`);
+    Logger.debug(`Server: ${connectionConfig.server}`);
+    Logger.debug(`Database: ${connectionConfig.database}`);
 
     if (connectionConfig.authentication === 'sql') {
+      // SQL Server Authentication using tedious driver (default)
       if (!connectionConfig.username || !connectionConfig.password) {
         throw new Error('SQL authentication requires username and password');
       }
-      Logger.info('Using SQL authentication');
-      // For SQL authentication, only set user and password (no authentication object)
+      Logger.info('Using SQL Server authentication (tedious driver)');
       config.user = connectionConfig.username;
       config.password = connectionConfig.password;
+      config.options.readOnlyIntent = connectionConfig.readonly;
     } else {
-      // Windows integrated authentication using NTLM
-      Logger.info('Using Windows integrated authentication (NTLM)');
-      // Use NTLM authentication with current Windows user credentials
-      // Get domain and username from environment if not provided
-      const domain = connectionConfig.domain || process.env.USERDOMAIN || '';
-      const username = connectionConfig.username || process.env.USERNAME || '';
+      // Windows Integrated Authentication using msnodesqlv8 driver
+      Logger.info('Using Windows Integrated Authentication (msnodesqlv8 driver)');
+      Logger.info('Connection will use current Windows user credentials');
 
-      Logger.debug(`NTLM - Domain: ${domain}, Username: ${username}`);
+      // CRITICAL: Must set driver to msnodesqlv8 for Windows auth
+      config.driver = 'msnodesqlv8';
 
-      config.authentication = {
-        type: 'ntlm',
-        options: {
-          domain: domain,
-          userName: username,
-          password: connectionConfig.password || '' // Empty password to use current session
-        }
-      };
+      // CRITICAL: Must set trustedConnection for Windows auth
+      config.options.trustedConnection = true;
+
+      // Do NOT set user/password for Windows auth - it uses current Windows session
+      Logger.debug('Windows authentication will use current user session credentials');
     }
 
     // Log connection string (with password masked)
     const connectionString = this.formatConnectionString(connectionConfig);
     Logger.info(`Connecting to database: ${connectionString}`);
 
-    pool = new sql.ConnectionPool(config);
-    await pool.connect();
+    try {
+      // Robust module access - handle different export patterns
+      const ConnectionPool = sql.default?.ConnectionPool || sql.ConnectionPool || sql.default;
 
-    Logger.info(`Successfully connected to ${connectionConfig.server}/${connectionConfig.database}`);
+      if (typeof ConnectionPool !== 'function') {
+        const driverName = connectionConfig.authentication === 'integrated' ? 'msnodesqlv8' : 'mssql';
+        Logger.error(`ConnectionPool not found in ${driverName} module. Available keys: ${Object.keys(sql).join(', ')}`);
+        throw new Error(`Failed to load ConnectionPool constructor from ${driverName} driver`);
+      }
+
+      Logger.debug(`Creating connection pool using ${connectionConfig.authentication} driver`);
+      pool = new ConnectionPool(config);
+
+      Logger.debug('Connecting to database...');
+      await pool.connect();
+
+      // Validate connection state
+      if (!pool.connected) {
+        throw new Error(`Connection failed - pool.connected is ${pool.connected}`);
+      }
+
+      // Validate required methods exist
+      if (typeof pool.request !== 'function') {
+        throw new Error(`Pool missing request() method - typeof pool.request is ${typeof pool.request}`);
+      }
+
+      Logger.info(`Successfully connected to ${connectionConfig.server}/${connectionConfig.database}`);
+      Logger.debug(`Pool state: connected=${pool.connected}, hasRequest=${typeof pool.request === 'function'}`);
+
+    } catch (error: any) {
+      Logger.error(`Connection failed for ${connectionConfig.authentication} authentication:`, error);
+      throw new Error(`${connectionConfig.authentication} authentication connection failed: ${error.message}`);
+    }
+
     this.pools.set(key, pool);
     return pool;
   }

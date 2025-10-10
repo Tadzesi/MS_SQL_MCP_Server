@@ -1,6 +1,11 @@
 # MS SQL MCP Server
 
-A Model Context Protocol (MCP) server that connects Claude Desktop and Claude Code to Microsoft SQL Server databases, enabling AI-powered database exploration, analysis, and Entity Framework Core code generation through natural language.
+A Model Context Protocol (MCP) server that connects **Claude Desktop** and **Claude Code** to Microsoft SQL Server databases, enabling AI-powered database exploration, analysis, and Entity Framework Core code generation through natural language.
+
+> **🚀 Quick Setup:**
+> - **Claude Desktop**: Configure in `claude_desktop_config.json` → [Setup Guide](#2-configure-claude-desktop-or-claude-code)
+> - **Claude Code**: Configure in VS Code `settings.json` → [Setup Guide](#configuration-for-claude-code)
+> - **Authentication**: Supports both SQL Server auth and Windows integrated auth ✅
 
 ## What is MCP?
 
@@ -54,9 +59,9 @@ npm install
 npm run build
 ```
 
-### 2. Configure Claude Desktop
+### 2. Configure Claude Desktop or Claude Code
 
-Edit your Claude Desktop MCP configuration file:
+**For Claude Desktop** - Edit your Claude Desktop MCP configuration file:
 
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 **macOS/Linux**: `~/.config/claude/claude_desktop_config.json`
@@ -87,6 +92,8 @@ Add the MCP server configuration:
 - On Windows, use double backslashes (`\\`) or forward slashes (`/`) in paths
 - Restart Claude Desktop after configuration changes
 
+**For Claude Code** - See the [Configuration for Claude Code](#configuration-for-claude-code) section below for `settings.json` setup instructions.
+
 ### 3. Start Using with Claude
 
 Open Claude Desktop and start asking:
@@ -100,6 +107,158 @@ Create an ER diagram for my database
 ```
 
 The server provides 38 tools that Claude can use to explore your database and generate code.
+
+## Configuration for Claude Code
+
+Claude Code uses a different configuration approach than Claude Desktop. Configure the MCP server in your Claude Code settings.
+
+### Step 1: Open Claude Code Settings
+
+1. Open Claude Code (VS Code extension)
+2. Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS)
+3. Type "Preferences: Open User Settings (JSON)"
+4. Or navigate to: File → Preferences → Settings → Extensions → Claude Code
+
+### Step 2: Add MCP Server Configuration
+
+Add the `mcpServers` section to your `settings.json`:
+
+#### SQL Server Authentication (Cross-Platform)
+
+```json
+{
+  "mcpServers": {
+    "mssql": {
+      "command": "node",
+      "args": [
+        "C:\\absolute\\path\\to\\MS_SQL_MCP_Server\\dist\\index.js"
+      ],
+      "env": {
+        "MSSQL_LOCAL_SERVER": "localhost",
+        "MSSQL_LOCAL_DATABASE": "YourDatabase",
+        "MSSQL_LOCAL_AUTH": "sql",
+        "MSSQL_LOCAL_USERNAME": "your_username",
+        "MSSQL_LOCAL_PASSWORD": "your_password"
+      }
+    }
+  }
+}
+```
+
+#### Windows Integrated Authentication ✅ (Windows Only)
+
+```json
+{
+  "mcpServers": {
+    "mssql": {
+      "command": "node",
+      "args": [
+        "C:\\absolute\\path\\to\\MS_SQL_MCP_Server\\dist\\index.js"
+      ],
+      "env": {
+        "MSSQL_LOCAL_SERVER": "SERVERNAME",
+        "MSSQL_LOCAL_DATABASE": "YourDatabase",
+        "MSSQL_LOCAL_AUTH": "integrated"
+      }
+    }
+  }
+}
+```
+
+**Key Points for Windows Authentication:**
+- ✅ Uses current Windows user credentials automatically
+- ✅ No username/password required
+- ✅ Leverages `msnodesqlv8` driver for true Windows integrated auth
+- ⚠️ Windows only - requires `msnodesqlv8` native addon
+
+#### Multiple Connection Profiles
+
+Configure multiple environments (local, dev, prod) in a single configuration:
+
+```json
+{
+  "mcpServers": {
+    "mssql": {
+      "command": "node",
+      "args": [
+        "C:\\absolute\\path\\to\\MS_SQL_MCP_Server\\dist\\index.js"
+      ],
+      "env": {
+        "MSSQL_LOCAL_SERVER": "localhost",
+        "MSSQL_LOCAL_DATABASE": "LocalDB",
+        "MSSQL_LOCAL_AUTH": "integrated",
+
+        "MSSQL_DEV_SERVER": "dev-sql-server",
+        "MSSQL_DEV_DATABASE": "DevDatabase",
+        "MSSQL_DEV_AUTH": "sql",
+        "MSSQL_DEV_USERNAME": "dev_user",
+        "MSSQL_DEV_PASSWORD": "dev_password",
+
+        "MSSQL_PROD_SERVER": "prod-sql-server",
+        "MSSQL_PROD_DATABASE": "ProdDatabase",
+        "MSSQL_PROD_AUTH": "sql",
+        "MSSQL_PROD_USERNAME": "readonly_user",
+        "MSSQL_PROD_PASSWORD": "readonly_password",
+        "MSSQL_PROD_READONLY": "true"
+      }
+    }
+  }
+}
+```
+
+Then use Claude Code commands to switch between profiles:
+```
+Switch to dev connection profile
+Switch to prod connection profile
+Switch to local connection profile
+```
+
+### Step 3: Reload Claude Code
+
+After saving `settings.json`:
+1. Press `Ctrl+Shift+P` / `Cmd+Shift+P`
+2. Type "Developer: Reload Window"
+3. Or restart VS Code
+
+### Step 4: Verify Connection
+
+Open Claude Code chat and test:
+```
+List all databases
+Show me tables in [YourDatabase]
+What connection am I using?
+```
+
+### Complete Example: Windows Auth for Local Development
+
+Full `settings.json` example for Windows development environment:
+
+```json
+{
+  "claude.mcpServers": {
+    "mssql": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\YourUser\\Projects\\MS_SQL_MCP_Server\\dist\\index.js"
+      ],
+      "env": {
+        "MSSQL_LOCAL_SERVER": "localhost\\SQLEXPRESS",
+        "MSSQL_LOCAL_DATABASE": "AdventureWorks",
+        "MSSQL_LOCAL_AUTH": "integrated",
+        "MSSQL_LOCAL_ENCRYPT": "false",
+        "MSSQL_LOCAL_TRUST_CERT": "true"
+      },
+      "disabled": false
+    }
+  }
+}
+```
+
+**Tips:**
+- Use `\\` (double backslash) for Windows paths in JSON
+- Or use `/` (forward slash): `"C:/Users/YourUser/Projects/..."`
+- Set `"disabled": false` to ensure the server is enabled
+- Check Claude Code output panel for connection logs
 
 ## Features
 
@@ -209,13 +368,15 @@ MSSQL_PROD_READONLY=true                # Always use read-only for production!
 }
 ```
 
-**Windows Integrated Authentication** (Windows only):
+**Windows Integrated Authentication** ✅ **FULLY SUPPORTED** (Windows only):
 
 ```json
 "env": {
   "MSSQL_LOCAL_AUTH": "integrated"
 }
 ```
+
+**Note**: Windows authentication uses the `msnodesqlv8` driver and authenticates with the current Windows user's credentials. No username/password needed!
 
 ### Configuration in Claude Desktop
 
@@ -559,7 +720,8 @@ node dist/index.js
 ### Project Dependencies
 
 - `@modelcontextprotocol/sdk` - MCP protocol implementation
-- `mssql` - SQL Server driver
+- `mssql` - SQL Server driver (tedious) for SQL Server authentication
+- `msnodesqlv8` - Native SQL Server driver for Windows integrated authentication
 - `winston` - Logging
 - `zod` - Schema validation
 
@@ -620,10 +782,13 @@ sqlcmd -S servername -U username -P password -Q "SELECT DB_NAME()"
 - Verify SQL Server authentication mode is enabled (not Windows-only)
 - Check username and password are correct
 
-_Windows Authentication_:
+_Windows Authentication_ ✅:
 
-- User running Claude Desktop must have SQL Server access
+- **Now fully supported** using `msnodesqlv8` driver
+- Set `MSSQL_LOCAL_AUTH="integrated"` in environment variables
+- User running Claude Desktop/Node.js must have SQL Server access
 - Test: `sqlcmd -S servername -E -Q "SELECT SUSER_NAME()"`
+- **Platform**: Windows only (msnodesqlv8 is a Windows-specific native addon)
 
 **Permission errors**:
 

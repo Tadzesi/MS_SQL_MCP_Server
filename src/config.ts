@@ -22,6 +22,7 @@ export class ConfigManager {
       throw new Error(
         `Configuration Error: No 'local' connection profile found.\n\n` +
         `Please configure your database connection by setting environment variables in your Claude Desktop MCP configuration:\n\n` +
+        `For SQL Server Authentication:\n` +
         `{\n` +
         `  "mcpServers": {\n` +
         `    "mssql": {\n` +
@@ -37,9 +38,23 @@ export class ConfigManager {
         `    }\n` +
         `  }\n` +
         `}\n\n` +
+        `For Windows Integrated Authentication:\n` +
+        `{\n` +
+        `  "mcpServers": {\n` +
+        `    "mssql": {\n` +
+        `      "command": "node",\n` +
+        `      "args": ["path/to/MS_SQL_MCP_Server/dist/index.js"],\n` +
+        `      "env": {\n` +
+        `        "MSSQL_LOCAL_SERVER": "SERVERNAME",\n` +
+        `        "MSSQL_LOCAL_DATABASE": "YourDatabase",\n` +
+        `        "MSSQL_LOCAL_AUTH": "integrated"\n` +
+        `      }\n` +
+        `    }\n` +
+        `  }\n` +
+        `}\n\n` +
         `Required: MSSQL_LOCAL_SERVER and MSSQL_LOCAL_DATABASE\n` +
-        `For SQL auth: MSSQL_LOCAL_USERNAME and MSSQL_LOCAL_PASSWORD\n` +
-        `For Windows auth: Set MSSQL_LOCAL_AUTH="integrated"`
+        `For SQL auth: MSSQL_LOCAL_AUTH="sql", MSSQL_LOCAL_USERNAME, MSSQL_LOCAL_PASSWORD\n` +
+        `For Windows auth: MSSQL_LOCAL_AUTH="integrated" (uses current Windows user)`
       );
     }
 
