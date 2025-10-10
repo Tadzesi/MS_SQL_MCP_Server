@@ -2,25 +2,66 @@
 
 All notable changes to the MS SQL MCP Server will be documented in this file.
 
-## [1.1.1] - 2025-10-09 (In Progress)
+## [1.1.3] - 2025-10-10
 
 ### Added
 
-- **Windows Domain Support**: Added `MSSQL_{PREFIX}_DOMAIN` environment variable for Windows authentication
-- **Auto-Detection**: Automatic detection of Windows domain from `USERDOMAIN` environment variable
-- **Auto-Detection**: Automatic detection of Windows username from `USERNAME` environment variable
-- **Documentation**: Added `CONNECTION_SOLUTION.md` documenting authentication troubleshooting and solutions
+- **Windows Integrated Authentication ✅**: Full support for Windows authentication via `msnodesqlv8` driver (Windows only)
+  - Authenticates using current Windows user session credentials (no username/password required)
+  - Uses native SQL Server driver for true Windows integrated security
+  - Platform: Windows only (requires `msnodesqlv8` native addon)
+- **Dynamic Driver Loading**: Automatic selection of correct SQL Server driver based on authentication type
+  - `mssql/msnodesqlv8.js` for Windows integrated authentication
+  - `mssql` (tedious) for SQL Server authentication
+  - Single codebase supports both authentication methods
+- **Claude Code Configuration Guide**: Comprehensive setup documentation in README.md
+  - Step-by-step instructions for VS Code `settings.json` configuration
+  - Complete examples for both SQL Server and Windows authentication
+  - Multiple connection profile setup examples
+  - Configuration verification steps
+- **Connection Test Suite**: Added `src/test-connection.ts` for testing both authentication methods
+  - Tests Windows integrated authentication
+  - Tests SQL Server authentication
+  - Validates connection and returns server information
+- **Dependencies**: Added `msnodesqlv8@5.1.1` for Windows authentication support
 
 ### Changed
 
-- **Windows Authentication**: Improved NTLM authentication with explicit domain and username configuration
-- **Authentication Logging**: Enhanced debug logging for Windows integrated authentication troubleshooting
-- **Windows Session Auth**: Windows integrated auth now supports current session credentials with empty password
+- **Database Connection Architecture**: Complete refactor of authentication handling in `database.ts`
+  - Dynamic driver import based on `authentication` configuration setting
+  - Windows auth: Uses `trustedConnection: true` with msnodesqlv8 driver
+  - SQL auth: Uses `user`/`password` with tedious driver
+  - Removed broken NTLM authentication approach
+- **Configuration Error Messages**: Enhanced with detailed examples for both authentication methods
+  - Shows separate configuration blocks for SQL and Windows auth
+  - Includes platform requirements and driver information
+- **Documentation**: Major updates across all documentation files
+  - **README.md**: Added "Configuration for Claude Code" section with complete setup guide
+  - **CLAUDE.md**: Updated with dynamic driver loading architecture and Windows auth details
+  - Quick setup box at top of README highlighting both Claude Desktop and Claude Code setup
+  - Updated dependencies section to list both `mssql` and `msnodesqlv8` drivers
 
 ### Fixed
 
-- **Windows Authentication**: Fixed Windows integrated authentication by properly configuring NTLM with domain/username detection
-- **Type Definitions**: Added `domain` field to `ConnectionConfig` interface for Windows authentication
+- **Windows Authentication**: Completely fixed broken Windows integrated authentication
+  - Previous NTLM-based approach did not work with tedious driver
+  - Now uses proper `msnodesqlv8` driver with `trustedConnection: true`
+  - Successfully authenticates with current Windows user credentials
+- **Driver Compatibility**: Resolved authentication failures by using correct driver for each auth type
+  - msnodesqlv8 cannot use SQL authentication
+  - tedious cannot use true Windows integrated authentication
+  - Dynamic loading ensures correct driver is always used
+
+### Technical Details
+
+- **ES Module Compatibility**: Dynamic imports use `.js` extension for msnodesqlv8 driver
+- **TypeScript Support**: Added `@ts-ignore` directive for msnodesqlv8 import (no type declarations)
+- **Connection Pooling**: Separate pools maintained for different authentication types
+- **Platform Requirements**: Windows authentication requires Windows OS and msnodesqlv8 native addon
+
+### Breaking Changes
+
+None - This release is fully backward compatible. Existing SQL Server authentication configurations continue to work unchanged.
 
 ## [1.1.0] - 2025-10-02
 

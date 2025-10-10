@@ -1,4 +1,3 @@
-import sql from 'mssql';
 import { DatabaseManager } from '../database.js';
 import {
   DatabaseInfo,

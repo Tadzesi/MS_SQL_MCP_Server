@@ -17,7 +17,8 @@
       "mcp__mssql__mssql_list_tables",
       "mcp__mssql__mssql_index_usage",
       "mcp__mssql__mssql_get_relationships",
-      "mcp__mssql__mssql_generate_er_diagram"
+      "mcp__mssql__mssql_generate_er_diagram",
+      "Read(//c/Users/mhorny/src/git/.npm/MSSQL_IntegratedAuthLogin/**)"
     ],
     "deny": [],
     "ask": []

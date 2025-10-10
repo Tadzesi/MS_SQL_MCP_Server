@@ -76,7 +76,10 @@ Tool Categories (tools/*)
 **database.ts** (158 lines)
 - `DatabaseManager` class handles SQL Server connections
 - Connection pooling with automatic lifecycle management via Map keyed by connection string
-- **Authentication Handling**: SQL auth sets `user`/`password` directly; Windows auth relies on current user session (no explicit credentials)
+- **Authentication Handling**:
+  - **SQL Server Authentication**: Uses tedious driver (standard `mssql` package) with `user`/`password`
+  - **Windows Integrated Authentication**: Uses msnodesqlv8 driver (via `mssql/msnodesqlv8.js`) with `trustedConnection: true`
+  - **Dynamic Driver Loading**: Automatically selects correct driver based on `authentication` config setting
 - **Critical**: `validateReadOnlyQuery()` enforces security by blocking write operations
 - Two execution patterns:
   - `executeQuery()` - returns full result sets
@@ -302,7 +305,17 @@ Since this is an MCP server (stdio transport), testing requires:
 
 ## Known Implementation Details
 
-- **Windows Authentication Limitation**: The `mssql` package (tedious driver) does not support true Windows SSPI authentication like native SQL Server tools. Windows auth relies on the current user's session credentials and cannot use explicit username/password. **SQL Server Authentication is recommended** for cross-platform compatibility.
+- **Windows Authentication**: ✅ **FULLY SUPPORTED** via msnodesqlv8 driver
+  - Uses `mssql/msnodesqlv8.js` driver for Windows Integrated Authentication
+  - Authenticates using current Windows user session credentials (no username/password needed)
+  - Requires `msnodesqlv8` package installed (native Node.js addon)
+  - Set `MSSQL_LOCAL_AUTH="integrated"` in environment variables to enable
+  - **Platform**: Windows only (msnodesqlv8 is Windows-specific)
+  - **SQL Server Authentication**: Uses standard tedious driver (cross-platform) for SQL auth
+- **Dynamic Driver Loading**: Code dynamically imports the appropriate driver at runtime based on authentication type
+  - `import('mssql/msnodesqlv8.js')` for Windows auth
+  - `import('mssql')` for SQL auth
+  - This allows single codebase to support both authentication methods
 - **Execution Plans**: `explainQuery()` returns simplified guidance due to mssql driver limitations. Full plans need SSMS.
 - **Dynamic SQL**: Some profiling queries use dynamic SQL which may require elevated permissions.
 - **Connection Pooling**: Pools are kept in memory map by connection string. Not cleaned up until server shutdown.
