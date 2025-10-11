@@ -18,7 +18,8 @@
       "mcp__mssql__mssql_index_usage",
       "mcp__mssql__mssql_get_relationships",
       "mcp__mssql__mssql_generate_er_diagram",
-      "Read(//c/Users/mhorny/src/git/.npm/MSSQL_IntegratedAuthLogin/**)"
+      "Read(//c/Users/mhorny/src/git/.npm/MSSQL_IntegratedAuthLogin/**)",
+      "Bash(git remote:*)"
     ],
     "deny": [],
     "ask": []
