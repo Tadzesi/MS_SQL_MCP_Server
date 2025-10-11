@@ -44,6 +44,13 @@ A Model Context Protocol (MCP) server that connects **Claude Desktop** and **Cla
 - Generate ER diagrams (Mermaid/PlantUML)
 - Document stored procedures and generate API specs
 
+**🔧 SQL Agent Job Monitoring**
+
+- List and inspect SQL Server Agent jobs
+- View job execution history and current status
+- Analyze job failures and error patterns
+- Monitor job schedules and next run times
+
 **🔒 Security First**
 
 - Read-only by default (no INSERT/UPDATE/DELETE/DROP)
@@ -106,7 +113,7 @@ Find slow queries running right now
 Create an ER diagram for my database
 ```
 
-The server provides 38 tools that Claude can use to explore your database and generate code.
+The server provides 43 tools that Claude can use to explore your database, monitor SQL Agent jobs, and generate code.
 
 ## Configuration for Claude Code
 
@@ -313,6 +320,14 @@ Full `settings.json` example for Windows development environment:
 - Compare schemas between databases
 - Generate synchronization scripts
 
+### 🔧 SQL Agent Job Monitoring (5 tools)
+
+- List all SQL Server Agent jobs with status
+- Get detailed job information (steps, schedules)
+- View job execution history
+- Monitor current job status and next run times
+- Analyze job failures and error patterns
+
 ## Environment Configuration
 
 The MCP server supports multiple connection profiles through environment variables. Configure different environments (local, development, production) using prefixed environment variables.
@@ -441,7 +456,8 @@ MS_SQL_MCP_Server/
 │       ├── profiling-tools.ts      # Data profiling (4 tools)
 │       ├── codegen-tools.ts        # EF Core code generation (6 tools)
 │       ├── documentation-tools.ts  # Documentation generation (4 tools)
-│       └── comparison-tools.ts     # Schema comparison (2 tools)
+│       ├── comparison-tools.ts     # Schema comparison (2 tools)
+│       └── job-tools.ts            # SQL Agent job monitoring (5 tools)
 │
 ├── dist/                           # Compiled JavaScript (generated)
 │   └── index.js                    # Entry point for MCP
@@ -475,7 +491,7 @@ Tool Categories (tools/*)
 
 ## MCP Server Functionality
 
-The server implements the Model Context Protocol, exposing **38 tools** that Claude can use through natural language. Each tool is a function that Claude can call to interact with SQL Server.
+The server implements the Model Context Protocol, exposing **43 tools** that Claude can use through natural language. Each tool is a function that Claude can call to interact with SQL Server.
 
 ### How MCP Tools Work
 
@@ -484,7 +500,7 @@ The server implements the Model Context Protocol, exposing **38 tools** that Cla
 3. **Database Interaction**: Server executes safe, read-only operations
 4. **Result Formatting**: Returns data to Claude for presentation
 
-### Tool Categories (38 Total)
+### Tool Categories (43 Total)
 
 #### 🔍 Schema Inspection (8 tools)
 
@@ -554,6 +570,16 @@ mssql_generate_api_documentation  - Generate REST API documentation
 ```
 mssql_compare_schemas             - Compare schemas between databases
 mssql_generate_sync_script        - Generate T-SQL sync script
+```
+
+#### 🔧 SQL Agent Job Monitoring (5 tools)
+
+```
+mssql_list_jobs                   - List all SQL Server Agent jobs
+mssql_describe_job                - Get detailed job info (steps, schedules)
+mssql_job_history                 - View job execution history
+mssql_job_status                  - Get current job status and next run
+mssql_analyze_job_failures        - Analyze job failures and error patterns
 ```
 
 #### ⚙️ Configuration (3 tools)
@@ -636,6 +662,20 @@ Compare the schemas between local and prod connections
 What are the differences between the dev and prod databases?
 
 Generate a sync script to update the staging database from production
+```
+
+### 🔧 SQL Agent Job Monitoring
+
+```
+List all SQL Server Agent jobs and their current status
+
+Show me the details of the 'DatabaseBackup' job including all steps
+
+What jobs have failed in the last 7 days?
+
+When is the 'DataRefresh' job scheduled to run next?
+
+Analyze failure patterns for jobs that have failed in the past 30 days
 ```
 
 ## Security Model
@@ -730,6 +770,9 @@ node dist/index.js
 - **Node.js**: 18.0.0 or higher
 - **SQL Server**: 2016+ or Azure SQL Database
 - **Permissions**: Read access (`SELECT`, `VIEW DEFINITION`, `VIEW DATABASE STATE`)
+  - **For SQL Agent jobs**: SELECT permissions on `msdb` database
+- **Platform for SQL Agent**: SQL Server (on-premises) or Azure SQL Managed Instance
+  - ❌ SQL Agent jobs not available on Azure SQL Database
 - **Network**: TCP/IP connectivity to SQL Server (port 1433)
 
 ## Known Limitations

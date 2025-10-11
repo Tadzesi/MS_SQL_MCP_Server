@@ -18,6 +18,7 @@ import { ProfilingTools } from './tools/profiling-tools.js';
 import { CodeGenTools } from './tools/codegen-tools.js';
 import { DocumentationTools } from './tools/documentation-tools.js';
 import { ComparisonTools } from './tools/comparison-tools.js';
+import { JobTools } from './tools/job-tools.js';
 
 /**
  * MS SQL MCP Server
@@ -34,6 +35,7 @@ class MsSqlMcpServer {
   private codeGenTools: CodeGenTools;
   private documentationTools: DocumentationTools;
   private comparisonTools: ComparisonTools;
+  private jobTools: JobTools;
 
   constructor() {
     this.server = new Server(
@@ -62,6 +64,7 @@ class MsSqlMcpServer {
     );
     this.documentationTools = new DocumentationTools(this.dbManager, this.schemaTools);
     this.comparisonTools = new ComparisonTools(this.dbManager, this.schemaTools);
+    this.jobTools = new JobTools(this.dbManager);
 
     this.setupHandlers();
   }
@@ -595,6 +598,62 @@ class MsSqlMcpServer {
           },
           required: ['source_database', 'target_database']
         }
+      },
+
+      // SQL Agent Job Tools
+      {
+        name: 'mssql_list_jobs',
+        description: 'List all SQL Server Agent jobs with status',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+          required: []
+        }
+      },
+      {
+        name: 'mssql_describe_job',
+        description: 'Get detailed job information including steps and schedules',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            job_name: { type: 'string', description: 'Job name' }
+          },
+          required: ['job_name']
+        }
+      },
+      {
+        name: 'mssql_job_history',
+        description: 'View job execution history with success/failure details',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            job_name: { type: 'string', description: 'Job name' },
+            top: { type: 'number', description: 'Number of history records to return (default: 50)' }
+          },
+          required: ['job_name']
+        }
+      },
+      {
+        name: 'mssql_job_status',
+        description: 'Get current job status (last run, next run, enabled/disabled)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            job_name: { type: 'string', description: 'Job name (optional, returns all jobs if not specified)' }
+          },
+          required: []
+        }
+      },
+      {
+        name: 'mssql_analyze_job_failures',
+        description: 'Analyze job failures and error patterns over a time period',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            days_back: { type: 'number', description: 'Number of days to analyze (default: 30)' }
+          },
+          required: []
+        }
       }
     ];
   }
@@ -944,6 +1003,32 @@ class MsSqlMcpServer {
             args.include_data,
             args.dry_run
           )
+        );
+
+      // SQL Agent Job Tools
+      case 'mssql_list_jobs':
+        return this.formatResponse(
+          await this.jobTools.listJobs(pool)
+        );
+
+      case 'mssql_describe_job':
+        return this.formatResponse(
+          await this.jobTools.describeJob(pool, args.job_name)
+        );
+
+      case 'mssql_job_history':
+        return this.formatResponse(
+          await this.jobTools.getJobHistory(pool, args.job_name, args.top)
+        );
+
+      case 'mssql_job_status':
+        return this.formatResponse(
+          await this.jobTools.getJobStatus(pool, args.job_name)
+        );
+
+      case 'mssql_analyze_job_failures':
+        return this.formatResponse(
+          await this.jobTools.analyzeJobFailures(pool, args.days_back)
         );
 
       default:

@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MS SQL MCP Server - A production-ready Model Context Protocol (MCP) server that connects Claude Code to Microsoft SQL Server databases for exploration, analysis, and Entity Framework Core code generation.
+MS SQL MCP Server - A production-ready Model Context Protocol (MCP) server that connects Claude Code to Microsoft SQL Server databases for exploration, analysis, Entity Framework Core code generation, and SQL Agent job monitoring.
 
-**Status**: ✅ Complete implementation with all 38 tools from the functional specification.
+**Status**: ✅ Complete implementation with all 43 tools (38 original + 5 SQL Agent job tools).
 
 ## Build Commands
 
@@ -53,14 +53,15 @@ Tool Categories (tools/*)
     ├── Data Profiling
     ├── Code Generation
     ├── Documentation
-    └── Schema Comparison
+    ├── Schema Comparison
+    └── SQL Agent Job Monitoring
 ```
 
 ### Core Components
 
-**index.ts** (987 lines)
+**index.ts** (1000+ lines)
 - MCP server implementation using `@modelcontextprotocol/sdk`
-- Registers all 38 tools with the MCP protocol
+- Registers all 43 tools with the MCP protocol
 - Routes tool calls to appropriate tool modules
 - Handles request/response formatting for MCP
 - Main entry point: `MsSqlMcpServer` class
@@ -126,6 +127,17 @@ Each tool category is a separate class that receives `DatabaseManager` as depend
 - `compareSchemas()` performs set operations on schema metadata
 - `generateSyncScript()` creates T-SQL but recommends review before execution
 
+**JobTools** (~450 lines)
+- Queries `msdb` system database for SQL Server Agent job information
+- `listJobs()` - Lists all SQL Agent jobs with basic info
+- `describeJob()` - Gets detailed job information including steps and schedules
+- `getJobHistory()` - Retrieves execution history with success/failure details
+- `getJobStatus()` - Shows current job status (last run, next run, running/idle)
+- `analyzeJobFailures()` - Analyzes job failures over time with error patterns and failed steps
+- Uses complex CTEs for aggregating job data, history, and schedules
+- Formats SQL Server date/time integers to readable datetime strings
+- **Requirements**: SELECT permissions on `msdb` database
+
 ## Security Model
 
 The server enforces read-only access through multiple layers:
@@ -164,7 +176,7 @@ Key generation methods:
 
 ## Type System
 
-All types defined in `types.ts` (238 lines):
+All types defined in `types.ts` (329 lines):
 
 **Configuration Types**:
 - `ServerConfig` - Root configuration object
@@ -184,11 +196,20 @@ All types defined in `types.ts` (238 lines):
 **Code Generation Types**:
 - Return types are always `string` or `Record<string, string>` (for multiple files)
 
+**SQL Agent Job Types**:
+- `JobInfo` - Basic job information (id, name, enabled, owner, category)
+- `JobStep` - Individual job step details with commands and error handling
+- `JobSchedule` - Job schedule configuration with frequency and timing
+- `JobDescription` - Complete job details including steps and schedules
+- `JobHistoryRecord` - Execution history with status and duration
+- `JobStatus` - Current job status (last run, next run, execution state)
+- `JobFailureAnalysis` - Failure analysis with error patterns and failure rates
+
 ## MCP Protocol Integration
 
 The server implements MCP protocol via two handlers:
 
-1. **ListToolsRequestSchema** - Returns metadata for all 38 tools
+1. **ListToolsRequestSchema** - Returns metadata for all 43 tools
    - Each tool has: name, description, inputSchema (JSON Schema)
    - Input schemas use Zod for runtime validation
 
@@ -200,6 +221,13 @@ The server implements MCP protocol via two handlers:
 Response formatting:
 - JSON data: `JSON.stringify(data, null, 2)`
 - Text/code: Raw string in text content block
+
+**SQL Agent Job Tools** (5 tools):
+- `mssql_list_jobs` - List all jobs (server-level, no database parameter needed)
+- `mssql_describe_job` - Get complete job details (requires `job_name`)
+- `mssql_job_history` - View execution history (requires `job_name`, optional `top`)
+- `mssql_job_status` - Current status (optional `job_name` for filtering)
+- `mssql_analyze_job_failures` - Failure analysis (optional `days_back`, default 30)
 
 ## Configuration
 
@@ -261,9 +289,10 @@ Modify `validateReadOnlyQuery()` in database.ts:
 
 Most SQL Server queries are in the tool classes. Common patterns:
 - Use parameterized schema/table names: `[${schema}].[${table}]`
-- Always `USE [${database}]` before queries
+- Always `USE [${database}]` before queries (except for server-level operations)
 - Query system views: `sys.*`, `INFORMATION_SCHEMA.*`
 - Query DMVs for performance: `sys.dm_*`
+- Query `msdb` for SQL Agent jobs: `msdb.dbo.sysjobs`, `msdb.dbo.sysjobhistory`, etc.
 
 ## Testing Locally
 
@@ -299,8 +328,9 @@ Since this is an MCP server (stdio transport), testing requires:
    ```
 
 3. **Test database requirements**:
-   - SQL Server 2016+ or Azure SQL Database
+   - SQL Server 2016+ or Azure SQL Database (SQL Agent jobs not available on Azure SQL Database - only SQL Managed Instance)
    - Read permissions on target databases
+   - Read permissions on `msdb` database for SQL Agent job tools
    - TCP/IP protocol enabled on port 1433
 
 ## Known Implementation Details
@@ -321,6 +351,7 @@ Since this is an MCP server (stdio transport), testing requires:
 - **Connection Pooling**: Pools are kept in memory map by connection string. Not cleaned up until server shutdown.
 - **Type Assertions**: `(request as any).timeout` used because mssql types are incomplete.
 - **Error Handling**: All tool calls wrapped in try/catch in `handleToolCall()`.
+- **SQL Agent Jobs**: Job monitoring tools query `msdb` database. Not available on Azure SQL Database (only SQL Managed Instance and on-premises SQL Server). Requires SELECT permission on `msdb.dbo.sysjobs*` tables.
 
 ## Important Conventions
 
@@ -330,6 +361,7 @@ Since this is an MCP server (stdio transport), testing requires:
 - **Generated code**: Includes XML documentation comments (`///`)
 - **Async operations**: All use async/await (no callbacks)
 - **Connection pooling**: Handled automatically by DatabaseManager
-- **Tool parameters**: All tools require database parameter except server-level tools
+- **Tool parameters**: All tools require database parameter except server-level tools (list_databases, switch_connection, active_queries, blocking_chains, wait_statistics, SQL Agent job tools)
 - **Logging**: Use `Logger` from `logger.ts` for debugging; logs go to stderr
 - **Error messages**: Include specific details (table names, error types) for MCP client display
+- **SQL Agent Date/Time Formatting**: Job tools convert SQL Server integer date/time formats (YYYYMMDD and HHMMSS) to readable strings
