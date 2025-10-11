@@ -2,6 +2,85 @@
 
 All notable changes to the MS SQL MCP Server will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **Configuration Error Handling**: Fixed "No 'local' connection profile found" error when running without local environment configured
+  - Server now checks for ANY available connection profiles (local, prod, dev) instead of only 'local'
+  - Automatically selects first available connection profile if 'local' is not configured
+  - Shows helpful error message listing available profiles when 'local' is missing
+  - Improved error messages to mention all supported prefixes (LOCAL, PROD, DEV)
+  - Users can now run with only MSSQL_PROD_* or MSSQL_DEV_* environment variables configured
+
+### Changed
+
+- **Default Connection Selection**: `current_connection` is now set dynamically based on available profiles
+  - Prefers 'local' if available
+  - Falls back to first available connection profile (e.g., 'prod' or 'dev')
+  - Logs which connection profile was automatically selected
+  - Updated `config.ts:13-79` with improved connection validation logic
+
+## [1.2.0] - 2025-10-11
+
+### Added
+
+- **SQL Server Agent Job Monitoring ✅**: Complete suite of job analysis tools (5 new tools)
+  - `mssql_list_jobs` - List all SQL Server Agent jobs with basic information
+  - `mssql_describe_job` - Get detailed job info including steps, schedules, and notifications
+  - `mssql_job_history` - View execution history with success/failure details
+  - `mssql_job_status` - Show current job status (last run, next run, running/idle/disabled)
+  - `mssql_analyze_job_failures` - Analyze job failures over time with error patterns
+- **Job Tools Class**: New `src/tools/job-tools.ts` module (~450 lines)
+  - Queries `msdb` system database for SQL Agent information
+  - Uses complex CTEs to aggregate job data, history, and schedules
+  - Formats SQL Server integer date/time to readable strings (YYYYMMDD/HHMMSS → datetime)
+  - Analyzes failure patterns with common error messages and failed step identification
+  - Calculates failure rates and next run times from schedule definitions
+- **Job Type Definitions**: 7 new TypeScript interfaces in `types.ts`
+  - `JobInfo` - Basic job information (id, name, enabled, owner, category)
+  - `JobStep` - Individual job step details with commands and error handling
+  - `JobSchedule` - Job schedule configuration with frequency and timing
+  - `JobDescription` - Complete job details including steps and schedules
+  - `JobHistoryRecord` - Execution history with status and duration
+  - `JobStatus` - Current job status (last run, next run, execution state)
+  - `JobFailureAnalysis` - Failure analysis with error patterns and failure rates
+
+### Changed
+
+- **Tool Count**: Increased from 38 to 43 tools
+- **Architecture Documentation**: Updated CLAUDE.md with JobTools category
+  - Added SQL Agent Job Monitoring to tool categories diagram
+  - Documented job tools architecture and query patterns
+  - Added msdb database requirements
+- **README**: Updated feature list and tool documentation
+  - Added SQL Agent Job Monitoring section
+  - Updated tool counts throughout documentation
+  - Added job monitoring examples
+
+### Requirements
+
+- **Database Permissions**: Job tools require SELECT permissions on `msdb` database
+  - Specifically: `msdb.dbo.sysjobs`, `msdb.dbo.sysjobsteps`, `msdb.dbo.sysjobhistory`, `msdb.dbo.sysjobschedules`, `msdb.dbo.sysschedules`
+- **Platform**: SQL Server Agent not available on Azure SQL Database
+  - ✅ SQL Server 2016+ (on-premises)
+  - ✅ Azure SQL Managed Instance
+  - ❌ Azure SQL Database (no SQL Agent)
+
+### Technical Details
+
+- **Date/Time Formatting**: Converts SQL Server integer formats to readable strings
+  - Run dates: YYYYMMDD → YYYY-MM-DD
+  - Run times: HHMMSS → HH:MM:SS
+  - Durations: HHMMSS → HH:MM:SS
+- **Query Optimization**: Uses CTEs and ROW_NUMBER() for efficient history retrieval
+- **Server-Level Tools**: Job tools don't require database parameter (operate on msdb)
+- **ES Module Support**: Uses `.js` extension for imports, follows project conventions
+
+### Breaking Changes
+
+None - This release is fully backward compatible. All existing tools continue to work unchanged.
+
 ## [1.1.3] - 2025-10-10
 
 ### Added
