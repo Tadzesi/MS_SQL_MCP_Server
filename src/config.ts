@@ -17,10 +17,12 @@ export class ConfigManager {
     const envConnections = this.loadConnectionsFromEnv();
     config.connections = { ...config.connections, ...envConnections };
 
-    // Validate that 'local' connection exists (default connection)
-    if (!config.connections['local']) {
+    const availableConnections = Object.keys(config.connections);
+
+    // Check if any connections are configured
+    if (availableConnections.length === 0) {
       throw new Error(
-        `Configuration Error: No 'local' connection profile found.\n\n` +
+        `Configuration Error: No connection profiles found.\n\n` +
         `Please configure your database connection by setting environment variables in your Claude Desktop MCP configuration:\n\n` +
         `For SQL Server Authentication:\n` +
         `{\n` +
@@ -52,13 +54,27 @@ export class ConfigManager {
         `    }\n` +
         `  }\n` +
         `}\n\n` +
-        `Required: MSSQL_LOCAL_SERVER and MSSQL_LOCAL_DATABASE\n` +
-        `For SQL auth: MSSQL_LOCAL_AUTH="sql", MSSQL_LOCAL_USERNAME, MSSQL_LOCAL_PASSWORD\n` +
-        `For Windows auth: MSSQL_LOCAL_AUTH="integrated" (uses current Windows user)`
+        `Required: MSSQL_{PREFIX}_SERVER and MSSQL_{PREFIX}_DATABASE\n` +
+        `Supported prefixes: LOCAL, PROD, DEV\n` +
+        `For SQL auth: MSSQL_{PREFIX}_AUTH="sql", MSSQL_{PREFIX}_USERNAME, MSSQL_{PREFIX}_PASSWORD\n` +
+        `For Windows auth: MSSQL_{PREFIX}_AUTH="integrated" (uses current Windows user)`
       );
     }
 
-    console.error(`Loaded ${Object.keys(config.connections).length} connection profile(s)`);
+    // Auto-select connection profile: prefer 'local', otherwise use first available
+    if (!config.connections['local']) {
+      const firstConnection = availableConnections[0];
+      config.current_connection = firstConnection;
+      console.error(
+        `Note: 'local' connection profile not found. Available profiles: ${availableConnections.join(', ')}\n` +
+        `Automatically selected '${firstConnection}' as the default connection.\n` +
+        `You can switch connections using the mssql_switch_connection tool.`
+      );
+    } else {
+      config.current_connection = 'local';
+    }
+
+    console.error(`Loaded ${availableConnections.length} connection profile(s): ${availableConnections.join(', ')}`);
     return config;
   }
 
@@ -110,7 +126,7 @@ export class ConfigManager {
         enable_cross_database_queries: true,
         enable_schema_comparison: true
       },
-      current_connection: 'local'
+      current_connection: '' // Set dynamically in loadConfig()
     };
   }
 

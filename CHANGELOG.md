@@ -2,6 +2,25 @@
 
 All notable changes to the MS SQL MCP Server will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **Configuration Error Handling**: Fixed "No 'local' connection profile found" error when running without local environment configured
+  - Server now checks for ANY available connection profiles (local, prod, dev) instead of only 'local'
+  - Automatically selects first available connection profile if 'local' is not configured
+  - Shows helpful error message listing available profiles when 'local' is missing
+  - Improved error messages to mention all supported prefixes (LOCAL, PROD, DEV)
+  - Users can now run with only MSSQL_PROD_* or MSSQL_DEV_* environment variables configured
+
+### Changed
+
+- **Default Connection Selection**: `current_connection` is now set dynamically based on available profiles
+  - Prefers 'local' if available
+  - Falls back to first available connection profile (e.g., 'prod' or 'dev')
+  - Logs which connection profile was automatically selected
+  - Updated `config.ts:13-79` with improved connection validation logic
+
 ## [1.2.0] - 2025-10-11
 
 ### Added
