@@ -19,7 +19,14 @@
       "mcp__mssql__mssql_get_relationships",
       "mcp__mssql__mssql_generate_er_diagram",
       "Read(//c/Users/mhorny/src/git/.npm/MSSQL_IntegratedAuthLogin/**)",
-      "Bash(git remote:*)"
+      "Bash(git remote:*)",
+      "Bash(npx openspec list:*)",
+      "Bash(dir \"C:\\Users\\mhorny\\src\\git\\.npm\\@MS_SQL_MCP_Server\\openspec\" /b)",
+      "Bash(mkdir:*)",
+      "Bash(dir \"C:\\Users\\mhorny\\src\\git\\.npm\\@MS_SQL_MCP_Server\\openspec\\changes\\fix-mcp-token-limit\" /s /b)",
+      "SlashCommand(/openspec:archive)",
+      "Bash(npx openspec archive:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

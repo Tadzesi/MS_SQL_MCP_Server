@@ -4,7 +4,16 @@ All notable changes to the MS SQL MCP Server will be documented in this file.
 
 ## [Unreleased]
 
+## [1.2.1] - 2025-10-12
+
 ### Fixed
+
+- **MCP Token Limit Compliance**: Fixed responses exceeding MCP protocol token limit
+  - Lowered default `max_response_tokens` from 30,000 to 20,000 tokens
+  - Provides 20% safety margin below actual MCP protocol limit of 25,000 tokens
+  - Prevents "response exceeds maximum allowed tokens" errors
+  - Updated src/config.ts:116 with new default
+  - Updated specification and documentation to reflect actual MCP limit
 
 - **Configuration Error Handling**: Fixed "No 'local' connection profile found" error when running without local environment configured
   - Server now checks for ANY available connection profiles (local, prod, dev) instead of only 'local'

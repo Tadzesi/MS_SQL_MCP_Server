@@ -1,3 +1,22 @@
+<!-- OPENSPEC:START -->
+# OpenSpec Instructions
+
+These instructions are for AI assistants working in this project.
+
+Always open `@/openspec/AGENTS.md` when the request:
+- Mentions planning or proposals (words like proposal, spec, change, plan)
+- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
+- Sounds ambiguous and you need the authoritative spec before coding
+
+Use `@/openspec/AGENTS.md` to learn:
+- How to create and apply change proposals
+- Spec format and conventions
+- Project structure and guidelines
+
+Keep this managed block so 'openspec update' can refresh the instructions.
+
+<!-- OPENSPEC:END -->
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -249,6 +268,58 @@ Connection profiles support:
 - Multiple environments via environment variable prefixes
 - Separate credentials per profile
 - Profile selection via `current_connection` setting
+
+### Response Size Limiting
+
+The server automatically validates and truncates MCP tool responses that exceed token limits to prevent protocol errors.
+
+**Configuration** (`limits.max_response_tokens` in config.ts):
+- **Default**: 20,000 tokens (provides 20% safety margin below MCP protocol limit of 25,000 tokens)
+- **Range**: 1 to 1,000,000 tokens
+- **Disabled**: Set to `0` to disable truncation entirely
+
+**Token Estimation**:
+- Uses character-based approximation: `estimatedTokens = Math.ceil(characters / 4)`
+- Conservative ratio ensures adequate safety margin
+- No external tokenizer dependencies required
+
+**Truncation Behavior**:
+
+1. **Array Responses** (e.g., job lists, query results):
+   - Reduces item count proportionally to fit within limit
+   - Returns structured response with metadata:
+     ```json
+     {
+       "truncated": true,
+       "total_items": 200,
+       "returned_items": 133,
+       "message": "Response truncated... Showing 133 of 200 items. Consider using 'top' and 'offset' parameters...",
+       "data": [...]
+     }
+     ```
+
+2. **Text Responses** (e.g., code generation, documentation):
+   - Truncates at character limit with clear indicator
+   - Appends: `[... Response truncated: X characters (estimated Y tokens) exceeds limit of Z tokens ...]`
+
+3. **Logging**:
+   - All truncation events logged to stderr via Winston logger
+   - Format: `WARN: Response truncated for tool 'tool_name': X tokens > Y limit (details)`
+   - Helps monitor which tools frequently hit limits for optimization
+
+**Tools Most Likely to Trigger Truncation**:
+- `mssql_list_jobs` - Large numbers of SQL Agent jobs (use `top` parameter)
+- `mssql_job_history` - Extensive history records (use `top` parameter)
+- `mssql_analyze_job_failures` - Detailed failure analysis (reduce `days_back` parameter)
+- `mssql_generate_data_dictionary` - Large schemas (specify `schema` parameter)
+- `mssql_generate_dbcontext` - Many tables (specify `schema` parameter)
+
+**Implementation Details** (`src/index.ts`):
+- `estimateTokenCount(text: string)` - Estimates tokens from character count
+- `buildTruncationMessage(toolName, totalItems, returnedItems)` - Creates user-friendly messages with tool-specific suggestions
+- `formatResponse(data, toolName)` - Handles JSON/array truncation
+- `formatTextResponse(text, toolName)` - Handles text truncation
+- All truncation logic centralized in response formatting methods
 
 ## Working with the Codebase
 
