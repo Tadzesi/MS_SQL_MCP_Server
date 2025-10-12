@@ -21,6 +21,7 @@ export interface LimitsConfig {
   max_rows: number;
   query_timeout_seconds: number;
   max_query_length: number;
+  max_response_tokens: number;
 }
 
 export interface CodeGenerationConfig {

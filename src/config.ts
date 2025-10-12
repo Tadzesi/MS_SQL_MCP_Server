@@ -112,7 +112,8 @@ export class ConfigManager {
       limits: {
         max_rows: 10000,
         query_timeout_seconds: 30,
-        max_query_length: 50000
+        max_query_length: 50000,
+        max_response_tokens: 20000
       },
       code_generation: {
         default_namespace: 'Data',

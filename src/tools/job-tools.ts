@@ -15,23 +15,65 @@ export class JobTools {
   constructor(private dbManager: DatabaseManager) {}
 
   /**
-   * List all SQL Server Agent jobs
+   * List all SQL Server Agent jobs with pagination and filtering
    */
-  async listJobs(pool: ConnectionPool): Promise<JobInfo[]> {
+  async listJobs(
+    pool: ConnectionPool,
+    options?: {
+      top?: number;
+      offset?: number;
+      category?: string;
+      enabled_only?: boolean;
+      name_pattern?: string;
+      include_description?: boolean;
+      max_description_length?: number;
+    }
+  ): Promise<JobInfo[]> {
+    // Default values
+    const top = Math.min(options?.top || 100, 500); // Max 500
+    const offset = options?.offset || 0;
+    const includeDescription = options?.include_description || false;
+    const maxDescLength = options?.max_description_length || 200;
+
+    // Build WHERE clause
+    const whereConditions: string[] = ['1=1'];
+
+    if (options?.category) {
+      whereConditions.push(`c.name = '${options.category.replace(/'/g, "''")}'`);
+    }
+
+    if (options?.enabled_only) {
+      whereConditions.push('j.enabled = 1');
+    }
+
+    if (options?.name_pattern) {
+      whereConditions.push(`j.name LIKE '${options.name_pattern.replace(/'/g, "''")}'`);
+    }
+
+    const whereClause = whereConditions.join(' AND ');
+
+    // Build description field
+    const descriptionField = includeDescription
+      ? `LEFT(j.description, ${maxDescLength}) AS description`
+      : 'NULL AS description';
+
     const query = `
       USE msdb;
       SELECT
         CONVERT(VARCHAR(36), j.job_id) AS job_id,
         j.name,
         j.enabled,
-        j.description,
+        ${descriptionField},
         j.date_created,
         j.date_modified,
         SUSER_SNAME(j.owner_sid) AS owner,
         c.name AS category
       FROM dbo.sysjobs j
       LEFT JOIN dbo.syscategories c ON j.category_id = c.category_id
+      WHERE ${whereClause}
       ORDER BY j.name
+      OFFSET ${offset} ROWS
+      FETCH NEXT ${top} ROWS ONLY
     `;
 
     const result = await this.dbManager.executeQuery<JobInfo>(pool, query);

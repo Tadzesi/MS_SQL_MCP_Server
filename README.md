@@ -700,6 +700,12 @@ The server enforces **read-only access** through multiple security layers:
 - **Row Limiting**: Automatically injects `TOP N` clause into SELECT queries (default: 10,000 rows)
 - **Timeout Enforcement**: 30-second default timeout prevents runaway queries
 - **Query Length Limits**: Maximum query length enforced (50,000 characters)
+- **Response Size Limiting**: Automatic truncation of large responses to prevent MCP protocol errors
+  - Default limit: 20,000 tokens (20% safety margin below MCP protocol limit of 25,000 tokens)
+  - Configurable range: 1 to 1,000,000 tokens, or 0 to disable
+  - Array responses: Truncated with metadata showing total vs. returned items
+  - Text responses: Character-limited with clear truncation indicators
+  - Helpful messages suggest using pagination or filtering for complete results
 
 ### 4. Feature Flags
 

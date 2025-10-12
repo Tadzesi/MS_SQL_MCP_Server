@@ -19,6 +19,7 @@ import { CodeGenTools } from './tools/codegen-tools.js';
 import { DocumentationTools } from './tools/documentation-tools.js';
 import { ComparisonTools } from './tools/comparison-tools.js';
 import { JobTools } from './tools/job-tools.js';
+import { Logger } from './logger.js';
 
 /**
  * MS SQL MCP Server
@@ -603,10 +604,18 @@ class MsSqlMcpServer {
       // SQL Agent Job Tools
       {
         name: 'mssql_list_jobs',
-        description: 'List all SQL Server Agent jobs with status',
+        description: 'List SQL Server Agent jobs with pagination and filtering options',
         inputSchema: {
           type: 'object',
-          properties: {},
+          properties: {
+            top: { type: 'number', description: 'Maximum number of jobs to return (default: 100, max: 500)' },
+            offset: { type: 'number', description: 'Number of jobs to skip for pagination (default: 0)' },
+            category: { type: 'string', description: 'Filter by job category name (optional)' },
+            enabled_only: { type: 'boolean', description: 'Only return enabled jobs (default: false)' },
+            name_pattern: { type: 'string', description: 'Filter by job name pattern using SQL LIKE syntax (optional)' },
+            include_description: { type: 'boolean', description: 'Include job descriptions in response (default: false)' },
+            max_description_length: { type: 'number', description: 'Maximum length for job descriptions (default: 200)' }
+          },
           required: []
         }
       },
@@ -710,7 +719,7 @@ class MsSqlMcpServer {
           connectionString: `Server=${connConfig.server};Database=${connConfig.database};User Id=${connConfig.username};Authentication=${connConfig.authentication}`
         };
 
-        return this.formatResponse(result);
+        return this.formatResponse(result, 'mssql_show_connection_config');
       }
 
       case 'mssql_switch_connection': {
@@ -728,7 +737,7 @@ class MsSqlMcpServer {
               database: newConfig.database,
               environment: newConfig.environment
             }
-          });
+          }, 'mssql_switch_connection');
         } catch (error: any) {
           return {
             content: [{
@@ -742,41 +751,48 @@ class MsSqlMcpServer {
 
       // Schema Inspection
       case 'mssql_list_databases':
-        return this.formatResponse(await this.schemaTools.listDatabases(pool));
+        return this.formatResponse(await this.schemaTools.listDatabases(pool), name);
 
       case 'mssql_list_tables':
         return this.formatResponse(
-          await this.schemaTools.listTables(pool, args.database, args.schema, args.include_system)
+          await this.schemaTools.listTables(pool, args.database, args.schema, args.include_system),
+          name
         );
 
       case 'mssql_describe_table':
         return this.formatResponse(
-          await this.schemaTools.describeTable(pool, args.database, args.schema, args.table)
+          await this.schemaTools.describeTable(pool, args.database, args.schema, args.table),
+          name
         );
 
       case 'mssql_list_stored_procedures':
         return this.formatResponse(
-          await this.schemaTools.listStoredProcedures(pool, args.database, args.schema, args.pattern)
+          await this.schemaTools.listStoredProcedures(pool, args.database, args.schema, args.pattern),
+          name
         );
 
       case 'mssql_get_procedure_definition':
         return this.formatTextResponse(
-          await this.schemaTools.getProcedureDefinition(pool, args.database, args.schema, args.procedure)
+          await this.schemaTools.getProcedureDefinition(pool, args.database, args.schema, args.procedure),
+          name
         );
 
       case 'mssql_list_views':
         return this.formatResponse(
-          await this.schemaTools.listViews(pool, args.database, args.schema)
+          await this.schemaTools.listViews(pool, args.database, args.schema),
+          name
         );
 
       case 'mssql_get_view_definition':
         return this.formatTextResponse(
-          await this.schemaTools.getViewDefinition(pool, args.database, args.schema, args.view)
+          await this.schemaTools.getViewDefinition(pool, args.database, args.schema, args.view),
+          name
         );
 
       case 'mssql_get_relationships':
         return this.formatResponse(
-          await this.schemaTools.getRelationships(pool, args.database, args.table, args.depth)
+          await this.schemaTools.getRelationships(pool, args.database, args.table, args.depth),
+          name
         );
 
       // Query Execution
@@ -788,59 +804,70 @@ class MsSqlMcpServer {
             args.query,
             Math.min(args.max_rows || 1000, limits.max_rows),
             args.timeout || limits.query_timeout_seconds
-          )
+          ),
+          name
         );
 
       case 'mssql_execute_scalar':
         return this.formatResponse(
-          await this.queryTools.executeScalar(pool, args.database, args.query)
+          await this.queryTools.executeScalar(pool, args.database, args.query),
+          name
         );
 
       // Query Analysis
       case 'mssql_explain_query':
         return this.formatResponse(
-          await this.queryTools.explainQuery(pool, args.database, args.query)
+          await this.queryTools.explainQuery(pool, args.database, args.query),
+          name
         );
 
       case 'mssql_validate_syntax':
         return this.formatResponse(
-          await this.queryTools.validateSyntax(pool, args.database, args.sql)
+          await this.queryTools.validateSyntax(pool, args.database, args.sql),
+          name
         );
 
       case 'mssql_find_missing_indexes':
         return this.formatResponse(
-          await this.queryTools.findMissingIndexes(pool, args.database, args.table)
+          await this.queryTools.findMissingIndexes(pool, args.database, args.table),
+          name
         );
 
       case 'mssql_analyze_query_performance':
         return this.formatResponse(
-          await this.queryTools.analyzeQueryPerformance(pool, args.database, args.query)
+          await this.queryTools.analyzeQueryPerformance(pool, args.database, args.query),
+          name
         );
 
       // Performance Monitoring
       case 'mssql_active_queries':
         return this.formatResponse(
-          await this.performanceTools.getActiveQueries(pool, args.min_duration_seconds || 5)
+          await this.performanceTools.getActiveQueries(pool, args.min_duration_seconds || 5),
+          name
         );
 
       case 'mssql_query_stats':
         return this.formatResponse(
-          await this.performanceTools.getQueryStats(pool, args.database, args.sort_by, args.top)
+          await this.performanceTools.getQueryStats(pool, args.database, args.sort_by, args.top),
+          name
         );
 
       case 'mssql_index_usage':
         return this.formatResponse(
-          await this.performanceTools.getIndexUsage(pool, args.database, args.table)
+          await this.performanceTools.getIndexUsage(pool, args.database, args.table),
+          name
         );
 
       case 'mssql_blocking_chains':
         return this.formatResponse(
-          await this.performanceTools.getBlockingChains(pool)
+          await this.performanceTools.getBlockingChains(pool),
+          name
         );
 
       case 'mssql_wait_statistics':
         return this.formatResponse(
-          await this.performanceTools.getWaitStatistics(pool, args.top)
+          await this.performanceTools.getWaitStatistics(pool, args.top),
+          name
         );
 
       // Data Profiling
@@ -853,7 +880,8 @@ class MsSqlMcpServer {
             args.table,
             Math.min(args.limit || 10, 100),
             args.order_by
-          )
+          ),
+          name
         );
 
       case 'mssql_column_statistics':
@@ -864,17 +892,20 @@ class MsSqlMcpServer {
             args.schema,
             args.table,
             args.column
-          )
+          ),
+          name
         );
 
       case 'mssql_data_quality_check':
         return this.formatResponse(
-          await this.profilingTools.checkDataQuality(pool, args.database, args.schema, args.table)
+          await this.profilingTools.checkDataQuality(pool, args.database, args.schema, args.table),
+          name
         );
 
       case 'mssql_table_statistics':
         return this.formatResponse(
-          await this.profilingTools.getTableStatistics(pool, args.database, args.schema, args.table)
+          await this.profilingTools.getTableStatistics(pool, args.database, args.schema, args.table),
+          name
         );
 
       // Entity Framework Code Generation
@@ -888,7 +919,8 @@ class MsSqlMcpServer {
             args.namespace,
             args.use_data_annotations,
             args.include_navigation_properties
-          )
+          ),
+          name
         );
 
       case 'mssql_generate_dbcontext':
@@ -900,7 +932,8 @@ class MsSqlMcpServer {
             args.context_name,
             args.namespace,
             args.include_fluent_api
-          )
+          ),
+          name
         );
 
       case 'mssql_generate_repository_interface':
@@ -912,7 +945,8 @@ class MsSqlMcpServer {
             args.table,
             args.namespace,
             args.include_async
-          )
+          ),
+          name
         );
 
       case 'mssql_generate_dto_classes':
@@ -924,7 +958,8 @@ class MsSqlMcpServer {
             args.table,
             args.namespace,
             args.dto_types
-          )
+          ),
+          name
         );
 
       case 'mssql_generate_ef_configuration':
@@ -935,12 +970,14 @@ class MsSqlMcpServer {
             args.schema,
             args.table,
             args.namespace
-          )
+          ),
+          name
         );
 
       case 'mssql_generate_migration_class':
         return this.formatTextResponse(
-          await this.codeGenTools.generateMigrationClass(args.source_database, args.migration_name)
+          await this.codeGenTools.generateMigrationClass(args.source_database, args.migration_name),
+          name
         );
 
       // Documentation
@@ -954,12 +991,14 @@ class MsSqlMcpServer {
             args.include_views,
             args.include_relationships,
             args.format
-          )
+          ),
+          name
         );
 
       case 'mssql_generate_er_diagram':
         return this.formatTextResponse(
-          await this.documentationTools.generateErDiagram(pool, args.database, args.schema, args.format)
+          await this.documentationTools.generateErDiagram(pool, args.database, args.schema, args.format),
+          name
         );
 
       case 'mssql_document_stored_procedure':
@@ -969,7 +1008,8 @@ class MsSqlMcpServer {
             args.database,
             args.schema,
             args.procedure
-          )
+          ),
+          name
         );
 
       case 'mssql_generate_api_documentation':
@@ -980,7 +1020,8 @@ class MsSqlMcpServer {
             args.schema,
             args.table,
             args.base_route
-          )
+          ),
+          name
         );
 
       // Schema Comparison
@@ -991,7 +1032,8 @@ class MsSqlMcpServer {
             args.source_database,
             args.target_database,
             args.schema
-          )
+          ),
+          name
         );
 
       case 'mssql_generate_sync_script':
@@ -1002,33 +1044,47 @@ class MsSqlMcpServer {
             args.target_database,
             args.include_data,
             args.dry_run
-          )
+          ),
+          name
         );
 
       // SQL Agent Job Tools
       case 'mssql_list_jobs':
         return this.formatResponse(
-          await this.jobTools.listJobs(pool)
+          await this.jobTools.listJobs(pool, {
+            top: args.top,
+            offset: args.offset,
+            category: args.category,
+            enabled_only: args.enabled_only,
+            name_pattern: args.name_pattern,
+            include_description: args.include_description,
+            max_description_length: args.max_description_length
+          }),
+          name
         );
 
       case 'mssql_describe_job':
         return this.formatResponse(
-          await this.jobTools.describeJob(pool, args.job_name)
+          await this.jobTools.describeJob(pool, args.job_name),
+          name
         );
 
       case 'mssql_job_history':
         return this.formatResponse(
-          await this.jobTools.getJobHistory(pool, args.job_name, args.top)
+          await this.jobTools.getJobHistory(pool, args.job_name, args.top),
+          name
         );
 
       case 'mssql_job_status':
         return this.formatResponse(
-          await this.jobTools.getJobStatus(pool, args.job_name)
+          await this.jobTools.getJobStatus(pool, args.job_name),
+          name
         );
 
       case 'mssql_analyze_job_failures':
         return this.formatResponse(
-          await this.jobTools.analyzeJobFailures(pool, args.days_back)
+          await this.jobTools.analyzeJobFailures(pool, args.days_back),
+          name
         );
 
       default:
@@ -1036,23 +1092,183 @@ class MsSqlMcpServer {
     }
   }
 
-  private formatResponse(data: any) {
+  /**
+   * Estimate token count from text length using character-based approximation.
+   * Uses conservative 4:1 character to token ratio.
+   *
+   * @param text - The text to estimate tokens for
+   * @returns Estimated token count (rounded up)
+   */
+  private estimateTokenCount(text: string): number {
+    return Math.ceil(text.length / 4);
+  }
+
+  /**
+   * Build a user-friendly truncation message with suggestions.
+   *
+   * @param toolName - Name of the tool being called
+   * @param totalItems - Total number of items available
+   * @param returnedItems - Number of items being returned
+   * @returns Formatted truncation message
+   */
+  private buildTruncationMessage(toolName: string, totalItems?: number, returnedItems?: number): string {
+    let message = `Response truncated due to size limit.`;
+
+    if (totalItems !== undefined && returnedItems !== undefined) {
+      message += ` Showing ${returnedItems} of ${totalItems} items.`;
+    }
+
+    // Tool-specific suggestions
+    if (toolName.includes('list_jobs') || toolName.includes('job_history') || toolName.includes('job_status')) {
+      message += ` Consider using the 'top' and 'offset' parameters to paginate results.`;
+    } else if (toolName.includes('analyze_job_failures')) {
+      message += ` Consider reducing the 'days_back' parameter to analyze a shorter time period.`;
+    } else if (toolName.includes('generate_data_dictionary') || toolName.includes('generate_dbcontext')) {
+      message += ` Consider specifying a 'schema' parameter to limit the scope.`;
+    }
+
+    return message;
+  }
+
+  private formatResponse(data: any, toolName: string = 'unknown') {
+    const maxTokens = this.configManager.getConfig().limits.max_response_tokens;
+
+    // If truncation is disabled (max_response_tokens === 0), return without size check
+    if (maxTokens === 0) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(data, null, 2)
+          }
+        ]
+      };
+    }
+
+    // Serialize and estimate token count
+    const serialized = JSON.stringify(data, null, 2);
+    const estimatedTokens = this.estimateTokenCount(serialized);
+
+    // If within limits, return normally
+    if (estimatedTokens <= maxTokens) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: serialized
+          }
+        ]
+      };
+    }
+
+    // Response exceeds limit - need to truncate
+    // Handle arrays by reducing item count
+    if (Array.isArray(data)) {
+      if (data.length === 0) {
+        // Empty array - return as is
+        return {
+          content: [
+            {
+              type: 'text',
+              text: serialized
+            }
+          ]
+        };
+      }
+
+      // Calculate how many items to keep
+      const itemsToKeep = Math.max(1, Math.floor(data.length * (maxTokens / estimatedTokens)));
+      const truncatedData = data.slice(0, itemsToKeep);
+
+      // Log truncation
+      Logger.warn(
+        `Response truncated for tool '${toolName}': ${estimatedTokens} tokens > ${maxTokens} limit ` +
+        `(reduced from ${data.length} to ${itemsToKeep} items)`
+      );
+
+      // Build truncated response with metadata
+      const truncatedResponse = {
+        truncated: true,
+        total_items: data.length,
+        returned_items: itemsToKeep,
+        message: this.buildTruncationMessage(toolName, data.length, itemsToKeep),
+        data: truncatedData
+      };
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(truncatedResponse, null, 2)
+          }
+        ]
+      };
+    }
+
+    // Handle objects (non-array JSON) - truncate the serialized JSON
+    const charLimit = maxTokens * 4;
+    const truncatedText = serialized.substring(0, charLimit) + '\n\n[... Response truncated due to size limit ...]';
+
+    Logger.warn(
+      `Response truncated for tool '${toolName}': ${estimatedTokens} tokens > ${maxTokens} limit ` +
+      `(truncated from ${serialized.length} to ${charLimit} characters)`
+    );
+
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(data, null, 2)
+          text: truncatedText
         }
       ]
     };
   }
 
-  private formatTextResponse(text: string) {
+  private formatTextResponse(text: string, toolName: string = 'unknown') {
+    const maxTokens = this.configManager.getConfig().limits.max_response_tokens;
+
+    // If truncation is disabled (max_response_tokens === 0), return without size check
+    if (maxTokens === 0) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text
+          }
+        ]
+      };
+    }
+
+    // Estimate token count
+    const estimatedTokens = this.estimateTokenCount(text);
+
+    // If within limits, return normally
+    if (estimatedTokens <= maxTokens) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text
+          }
+        ]
+      };
+    }
+
+    // Text exceeds limit - truncate
+    const charLimit = maxTokens * 4;
+    const truncatedText = text.substring(0, charLimit) +
+      `\n\n[... Response truncated: ${text.length} characters (estimated ${estimatedTokens} tokens) exceeds limit of ${maxTokens} tokens ...]`;
+
+    Logger.warn(
+      `Text response truncated for tool '${toolName}': ${estimatedTokens} tokens > ${maxTokens} limit ` +
+      `(truncated from ${text.length} to ${charLimit} characters)`
+    );
+
     return {
       content: [
         {
           type: 'text',
-          text
+          text: truncatedText
         }
       ]
     };
