@@ -1,7 +1,7 @@
 # Project Context
 
 ## Purpose
-MS SQL MCP Server is a production-ready Model Context Protocol (MCP) server that connects Claude Code to Microsoft SQL Server databases. It provides 43 specialized tools for:
+MS SQL MCP Server is a production-ready Model Context Protocol (MCP) server that connects Claude Code to Microsoft SQL Server databases. It provides 38 specialized tools for:
 
 - **Schema Exploration**: Inspect databases, tables, columns, indexes, and relationships
 - **Query Execution & Analysis**: Run SELECT queries with safety limits and performance analysis
@@ -10,9 +10,8 @@ MS SQL MCP Server is a production-ready Model Context Protocol (MCP) server that
 - **Code Generation**: Generate Entity Framework Core entities, DbContext, repositories, DTOs, and Fluent API configurations
 - **Documentation**: Create data dictionaries, ER diagrams (Mermaid/PlantUML), and API documentation
 - **Schema Comparison**: Compare and synchronize schemas between databases
-- **SQL Agent Job Monitoring**: List, describe, monitor, and analyze SQL Server Agent jobs
 
-**Status**: ✅ Complete implementation with all 43 tools operational.
+**Status**: ✅ Complete implementation with all 38 tools operational.
 
 ## Tech Stack
 
@@ -51,7 +50,6 @@ MS SQL MCP Server is a production-ready Model Context Protocol (MCP) server that
 - `USE [${database}]` before queries (except server-level operations)
 - Query system catalog views (`sys.*`, `INFORMATION_SCHEMA.*`)
 - Query DMVs for performance data (`sys.dm_*`)
-- Query `msdb` for SQL Agent job data
 
 **Generated C# Code**:
 - 4-space indentation
@@ -116,7 +114,6 @@ Since this is an MCP server using stdio transport, testing requires:
 3. **Test Database Requirements**:
    - SQL Server 2016+ or Azure SQL Database
    - Read permissions on target databases
-   - Read permissions on `msdb` for SQL Agent job tools
    - TCP/IP protocol enabled (port 1433)
 
 **Security Testing**:
@@ -152,8 +149,6 @@ Since this is an MCP server using stdio transport, testing requires:
 - Relational database management system
 - System catalog views (`sys.*`) for metadata
 - Dynamic Management Views (DMVs) for performance monitoring
-- `msdb` database for SQL Server Agent jobs
-- SQL Server Agent for scheduled job automation
 
 ### Entity Framework Core
 - .NET ORM (Object-Relational Mapper)
@@ -181,7 +176,6 @@ Since this is an MCP server using stdio transport, testing requires:
 1. **ES Modules Required**: All imports must include `.js` extension
 2. **stdio Transport**: No HTTP endpoints, uses stdin/stdout for MCP protocol
 3. **Windows Authentication**: msnodesqlv8 is Windows-only (SQL auth is cross-platform)
-4. **SQL Agent Jobs**: Not available on Azure SQL Database (only SQL Managed Instance and on-premises)
 
 ### Performance Constraints
 1. **Row Limits**: `addRowLimit()` enforces max_rows (default 1000, max 10000)
@@ -200,11 +194,10 @@ Since this is an MCP server using stdio transport, testing requires:
 - **Microsoft SQL Server** (2016+)
   - Target database for schema exploration and queries
   - Requires SELECT permissions on user databases
-  - Requires SELECT permissions on `msdb` for SQL Agent job tools
   - TCP/IP protocol must be enabled (port 1433)
 
-- **Azure SQL Database** (SQL Agent jobs not supported)
-- **Azure SQL Managed Instance** (full SQL Agent support)
+- **Azure SQL Database**
+- **Azure SQL Managed Instance**
 
 ### MCP Protocol
 - **@modelcontextprotocol/sdk** - Official MCP SDK for Node.js
@@ -222,4 +215,3 @@ Since this is an MCP server using stdio transport, testing requires:
 - **sys.dm_exec_requests**, **sys.dm_exec_query_stats** - Performance monitoring
 - **sys.dm_db_index_usage_stats** - Index usage statistics
 - **sys.dm_os_wait_stats** - Wait statistics
-- **msdb.dbo.sysjobs**, **msdb.dbo.sysjobhistory**, **msdb.dbo.sysjobschedules** - SQL Agent jobs

@@ -18,7 +18,6 @@ import { ProfilingTools } from './tools/profiling-tools.js';
 import { CodeGenTools } from './tools/codegen-tools.js';
 import { DocumentationTools } from './tools/documentation-tools.js';
 import { ComparisonTools } from './tools/comparison-tools.js';
-import { JobTools } from './tools/job-tools.js';
 import { Logger } from './logger.js';
 
 /**
@@ -36,7 +35,6 @@ class MsSqlMcpServer {
   private codeGenTools: CodeGenTools;
   private documentationTools: DocumentationTools;
   private comparisonTools: ComparisonTools;
-  private jobTools: JobTools;
 
   constructor() {
     this.server = new Server(
@@ -65,7 +63,6 @@ class MsSqlMcpServer {
     );
     this.documentationTools = new DocumentationTools(this.dbManager, this.schemaTools);
     this.comparisonTools = new ComparisonTools(this.dbManager, this.schemaTools);
-    this.jobTools = new JobTools(this.dbManager);
 
     this.setupHandlers();
   }
@@ -104,7 +101,7 @@ class MsSqlMcpServer {
       // Configuration Tools
       {
         name: 'mssql_show_connection_config',
-        description: 'Display current connection configuration and SQL connection string details',
+        description: 'Display current connection configuration',
         inputSchema: {
           type: 'object',
           properties: {},
@@ -113,13 +110,13 @@ class MsSqlMcpServer {
       },
       {
         name: 'mssql_switch_connection',
-        description: 'Switch to a different SQL Server connection profile (local, prod, or dev). Default profile is "local".',
+        description: 'Switch SQL Server connection profile',
         inputSchema: {
           type: 'object',
           properties: {
             environment: {
               type: 'string',
-              description: 'Connection profile name (local, prod, or dev)',
+              description: 'Connection profile',
               enum: ['local', 'prod', 'dev']
             }
           },
@@ -130,7 +127,7 @@ class MsSqlMcpServer {
       // Schema Inspection Tools
       {
         name: 'mssql_list_databases',
-        description: 'List all accessible databases on the server',
+        description: 'List accessible databases',
         inputSchema: {
           type: 'object',
           properties: {},
@@ -139,90 +136,90 @@ class MsSqlMcpServer {
       },
       {
         name: 'mssql_list_tables',
-        description: 'List all tables in a specified database',
+        description: 'List tables in database',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Target database name' },
-            schema: { type: 'string', description: 'Filter by schema (optional)' },
-            include_system: { type: 'boolean', description: 'Include system tables (default: false)' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema filter' },
+            include_system: { type: 'boolean', description: 'Include system tables' }
           },
           required: ['database']
         }
       },
       {
         name: 'mssql_describe_table',
-        description: 'Get detailed schema information for a specific table',
+        description: 'Get table schema details',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Schema name (default: dbo)' },
-            table: { type: 'string', description: 'Table name' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema' },
+            table: { type: 'string', description: 'Table' }
           },
           required: ['database', 'schema', 'table']
         }
       },
       {
         name: 'mssql_list_stored_procedures',
-        description: 'List stored procedures in a database',
+        description: 'List stored procedures',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Filter by schema (optional)' },
-            pattern: { type: 'string', description: 'Name pattern filter (SQL LIKE syntax, optional)' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema filter' },
+            pattern: { type: 'string', description: 'Name pattern' }
           },
           required: ['database']
         }
       },
       {
         name: 'mssql_get_procedure_definition',
-        description: 'Retrieve the full source code of a stored procedure',
+        description: 'Get stored procedure source code',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Schema name' },
-            procedure: { type: 'string', description: 'Procedure name' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema' },
+            procedure: { type: 'string', description: 'Procedure' }
           },
           required: ['database', 'schema', 'procedure']
         }
       },
       {
         name: 'mssql_list_views',
-        description: 'List all views in a specified database',
+        description: 'List views in database',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Filter by schema (optional)' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema filter' }
           },
           required: ['database']
         }
       },
       {
         name: 'mssql_get_view_definition',
-        description: 'Retrieve the full source code of a view',
+        description: 'Get view source code',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Schema name' },
-            view: { type: 'string', description: 'View name' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema' },
+            view: { type: 'string', description: 'View' }
           },
           required: ['database', 'schema', 'view']
         }
       },
       {
         name: 'mssql_get_relationships',
-        description: 'Map foreign key relationships for a table or entire database',
+        description: 'Map foreign key relationships',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            table: { type: 'string', description: 'Specific table to analyze (optional)' },
-            depth: { type: 'number', description: 'Relationship traversal depth (default: 1)' }
+            database: { type: 'string', description: 'Database' },
+            table: { type: 'string', description: 'Table filter' },
+            depth: { type: 'number', description: 'Traversal depth' }
           },
           required: ['database']
         }
@@ -231,26 +228,26 @@ class MsSqlMcpServer {
       // Query Execution Tools
       {
         name: 'mssql_execute_query',
-        description: 'Execute a SELECT query and return results (read-only)',
+        description: 'Execute SELECT query',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            query: { type: 'string', description: 'SQL SELECT statement' },
-            max_rows: { type: 'number', description: 'Maximum rows to return (default: 1000, max: 10000)' },
-            timeout: { type: 'number', description: 'Query timeout in seconds (default: 30)' }
+            database: { type: 'string', description: 'Database' },
+            query: { type: 'string', description: 'SQL query' },
+            max_rows: { type: 'number', description: 'Row limit' },
+            timeout: { type: 'number', description: 'Timeout seconds' }
           },
           required: ['database', 'query']
         }
       },
       {
         name: 'mssql_execute_scalar',
-        description: 'Execute a query that returns a single value',
+        description: 'Execute query returning single value',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            query: { type: 'string', description: 'SQL query returning single value' }
+            database: { type: 'string', description: 'Database' },
+            query: { type: 'string', description: 'SQL query' }
           },
           required: ['database', 'query']
         }
@@ -259,48 +256,48 @@ class MsSqlMcpServer {
       // Query Analysis Tools
       {
         name: 'mssql_explain_query',
-        description: 'Generate execution plan without executing the query',
+        description: 'Generate execution plan',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            query: { type: 'string', description: 'SQL query to analyze' }
+            database: { type: 'string', description: 'Database' },
+            query: { type: 'string', description: 'SQL query' }
           },
           required: ['database', 'query']
         }
       },
       {
         name: 'mssql_validate_syntax',
-        description: 'Check SQL syntax without execution',
+        description: 'Validate SQL syntax',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            sql: { type: 'string', description: 'SQL statement to validate' }
+            database: { type: 'string', description: 'Database' },
+            sql: { type: 'string', description: 'SQL statement' }
           },
           required: ['database', 'sql']
         }
       },
       {
         name: 'mssql_find_missing_indexes',
-        description: 'Identify missing indexes based on query patterns',
+        description: 'Find missing indexes',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            table: { type: 'string', description: 'Specific table to analyze (optional)' }
+            database: { type: 'string', description: 'Database' },
+            table: { type: 'string', description: 'Table filter' }
           },
           required: ['database']
         }
       },
       {
         name: 'mssql_analyze_query_performance',
-        description: 'Deep analysis of query performance bottlenecks',
+        description: 'Analyze query performance',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            query: { type: 'string', description: 'SQL query to analyze' }
+            database: { type: 'string', description: 'Database' },
+            query: { type: 'string', description: 'SQL query' }
           },
           required: ['database', 'query']
         }
@@ -309,43 +306,43 @@ class MsSqlMcpServer {
       // Performance Monitoring Tools
       {
         name: 'mssql_active_queries',
-        description: 'Show currently executing queries',
+        description: 'Show executing queries',
         inputSchema: {
           type: 'object',
           properties: {
-            min_duration_seconds: { type: 'number', description: 'Filter by minimum execution time (default: 5)' }
+            min_duration_seconds: { type: 'number', description: 'Min execution time' }
           },
           required: []
         }
       },
       {
         name: 'mssql_query_stats',
-        description: 'Get performance statistics for frequent or expensive queries',
+        description: 'Get query performance statistics',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            sort_by: { type: 'string', enum: ['duration', 'cpu', 'reads', 'executions'], description: 'Sort metric (default: duration)' },
-            top: { type: 'number', description: 'Number of queries to return (default: 20)' }
+            database: { type: 'string', description: 'Database' },
+            sort_by: { type: 'string', enum: ['duration', 'cpu', 'reads', 'executions'], description: 'Sort metric' },
+            top: { type: 'number', description: 'Result limit' }
           },
           required: ['database']
         }
       },
       {
         name: 'mssql_index_usage',
-        description: 'Analyze index usage statistics',
+        description: 'Analyze index usage',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            table: { type: 'string', description: 'Specific table to analyze (optional)' }
+            database: { type: 'string', description: 'Database' },
+            table: { type: 'string', description: 'Table filter' }
           },
           required: ['database']
         }
       },
       {
         name: 'mssql_blocking_chains',
-        description: 'Identify blocking and deadlock situations',
+        description: 'Identify blocking and deadlocks',
         inputSchema: {
           type: 'object',
           properties: {},
@@ -354,11 +351,11 @@ class MsSqlMcpServer {
       },
       {
         name: 'mssql_wait_statistics',
-        description: 'Analyze database wait statistics',
+        description: 'Analyze wait statistics',
         inputSchema: {
           type: 'object',
           properties: {
-            top: { type: 'number', description: 'Number of wait types to return (default: 10)' }
+            top: { type: 'number', description: 'Result limit' }
           },
           required: []
         }
@@ -367,55 +364,55 @@ class MsSqlMcpServer {
       // Data Profiling Tools
       {
         name: 'mssql_sample_data',
-        description: 'Retrieve sample rows from a table',
+        description: 'Get table sample rows',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Schema name (default: dbo)' },
-            table: { type: 'string', description: 'Table name' },
-            limit: { type: 'number', description: 'Number of rows (default: 10, max: 100)' },
-            order_by: { type: 'string', description: 'Column to sort by (optional)' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema' },
+            table: { type: 'string', description: 'Table' },
+            limit: { type: 'number', description: 'Row count' },
+            order_by: { type: 'string', description: 'Sort column' }
           },
           required: ['database', 'schema', 'table']
         }
       },
       {
         name: 'mssql_column_statistics',
-        description: 'Get data distribution statistics for a column',
+        description: 'Get column statistics',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Schema name' },
-            table: { type: 'string', description: 'Table name' },
-            column: { type: 'string', description: 'Column name' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema' },
+            table: { type: 'string', description: 'Table' },
+            column: { type: 'string', description: 'Column' }
           },
           required: ['database', 'schema', 'table', 'column']
         }
       },
       {
         name: 'mssql_data_quality_check',
-        description: 'Identify data quality issues',
+        description: 'Check data quality',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Schema name' },
-            table: { type: 'string', description: 'Table name' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema' },
+            table: { type: 'string', description: 'Table' }
           },
           required: ['database', 'schema', 'table']
         }
       },
       {
         name: 'mssql_table_statistics',
-        description: 'Get comprehensive table statistics',
+        description: 'Get table statistics',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Schema name' },
-            table: { type: 'string', description: 'Table name' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema' },
+            table: { type: 'string', description: 'Table' }
           },
           required: ['database', 'schema', 'table']
         }
@@ -424,64 +421,64 @@ class MsSqlMcpServer {
       // Entity Framework Code Generation Tools
       {
         name: 'mssql_generate_entity_class',
-        description: 'Generate C# entity class from table schema',
+        description: 'Generate C# entity class',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Schema name' },
-            table: { type: 'string', description: 'Table name' },
-            namespace: { type: 'string', description: 'C# namespace (optional)' },
-            use_data_annotations: { type: 'boolean', description: 'Use Data Annotations (default: true)' },
-            include_navigation_properties: { type: 'boolean', description: 'Include navigation properties (default: true)' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema' },
+            table: { type: 'string', description: 'Table' },
+            namespace: { type: 'string', description: 'C# namespace' },
+            use_data_annotations: { type: 'boolean', description: 'Use Data Annotations' },
+            include_navigation_properties: { type: 'boolean', description: 'Include navigation properties' }
           },
           required: ['database', 'schema', 'table']
         }
       },
       {
         name: 'mssql_generate_dbcontext',
-        description: 'Generate DbContext class for a database or schema',
+        description: 'Generate DbContext class',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Limit to specific schema (optional)' },
-            context_name: { type: 'string', description: 'DbContext class name (optional)' },
-            namespace: { type: 'string', description: 'C# namespace (optional)' },
-            include_fluent_api: { type: 'boolean', description: 'Include Fluent API configurations (default: true)' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema filter' },
+            context_name: { type: 'string', description: 'DbContext class name' },
+            namespace: { type: 'string', description: 'C# namespace' },
+            include_fluent_api: { type: 'boolean', description: 'Include Fluent API' }
           },
           required: ['database']
         }
       },
       {
         name: 'mssql_generate_repository_interface',
-        description: 'Generate repository interface for a table',
+        description: 'Generate repository interface',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Schema name' },
-            table: { type: 'string', description: 'Table name' },
-            namespace: { type: 'string', description: 'C# namespace (optional)' },
-            include_async: { type: 'boolean', description: 'Include async methods (default: true)' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema' },
+            table: { type: 'string', description: 'Table' },
+            namespace: { type: 'string', description: 'C# namespace' },
+            include_async: { type: 'boolean', description: 'Include async methods' }
           },
           required: ['database', 'schema', 'table']
         }
       },
       {
         name: 'mssql_generate_dto_classes',
-        description: 'Generate Data Transfer Object (DTO) classes',
+        description: 'Generate DTO classes',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Schema name' },
-            table: { type: 'string', description: 'Table name' },
-            namespace: { type: 'string', description: 'C# namespace (optional)' },
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema' },
+            table: { type: 'string', description: 'Table' },
+            namespace: { type: 'string', description: 'C# namespace' },
             dto_types: {
               type: 'array',
               items: { type: 'string', enum: ['create', 'update', 'read', 'list'] },
-              description: 'DTO types to generate (default: all)'
+              description: 'DTO types'
             }
           },
           required: ['database', 'schema', 'table']
@@ -489,25 +486,25 @@ class MsSqlMcpServer {
       },
       {
         name: 'mssql_generate_ef_configuration',
-        description: 'Generate Fluent API entity configuration class',
+        description: 'Generate Fluent API configuration',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Schema name' },
-            table: { type: 'string', description: 'Table name' },
-            namespace: { type: 'string', description: 'C# namespace (optional)' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema' },
+            table: { type: 'string', description: 'Table' },
+            namespace: { type: 'string', description: 'C# namespace' }
           },
           required: ['database', 'schema', 'table']
         }
       },
       {
         name: 'mssql_generate_migration_class',
-        description: 'Generate EF Core migration class for schema changes',
+        description: 'Generate EF Core migration',
         inputSchema: {
           type: 'object',
           properties: {
-            source_database: { type: 'string', description: 'Current database state' },
+            source_database: { type: 'string', description: 'Source database' },
             migration_name: { type: 'string', description: 'Migration name' }
           },
           required: ['source_database', 'migration_name']
@@ -517,56 +514,56 @@ class MsSqlMcpServer {
       // Documentation Tools
       {
         name: 'mssql_generate_data_dictionary',
-        description: 'Create comprehensive database documentation',
+        description: 'Generate database documentation',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Limit to specific schema (optional)' },
-            include_procedures: { type: 'boolean', description: 'Include stored procedures (default: true)' },
-            include_views: { type: 'boolean', description: 'Include views (default: true)' },
-            include_relationships: { type: 'boolean', description: 'Include ER diagram (default: true)' },
-            format: { type: 'string', enum: ['markdown', 'html'], description: 'Output format (default: markdown)' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema filter' },
+            include_procedures: { type: 'boolean', description: 'Include procedures' },
+            include_views: { type: 'boolean', description: 'Include views' },
+            include_relationships: { type: 'boolean', description: 'Include ER diagram' },
+            format: { type: 'string', enum: ['markdown', 'html'], description: 'Output format' }
           },
           required: ['database']
         }
       },
       {
         name: 'mssql_generate_er_diagram',
-        description: 'Generate Entity Relationship diagram',
+        description: 'Generate ER diagram',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Limit to specific schema (optional)' },
-            format: { type: 'string', enum: ['mermaid', 'plantuml', 'ascii'], description: 'Diagram format (default: mermaid)' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema filter' },
+            format: { type: 'string', enum: ['mermaid', 'plantuml', 'ascii'], description: 'Diagram format' }
           },
           required: ['database']
         }
       },
       {
         name: 'mssql_document_stored_procedure',
-        description: 'Generate detailed documentation for a stored procedure',
+        description: 'Document stored procedure',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Schema name' },
-            procedure: { type: 'string', description: 'Procedure name' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema' },
+            procedure: { type: 'string', description: 'Procedure' }
           },
           required: ['database', 'schema', 'procedure']
         }
       },
       {
         name: 'mssql_generate_api_documentation',
-        description: 'Generate API endpoint documentation based on tables',
+        description: 'Generate API documentation',
         inputSchema: {
           type: 'object',
           properties: {
-            database: { type: 'string', description: 'Database name' },
-            schema: { type: 'string', description: 'Schema name' },
-            table: { type: 'string', description: 'Table name' },
-            base_route: { type: 'string', description: 'API base route (optional)' }
+            database: { type: 'string', description: 'Database' },
+            schema: { type: 'string', description: 'Schema' },
+            table: { type: 'string', description: 'Table' },
+            base_route: { type: 'string', description: 'API base route' }
           },
           required: ['database', 'schema', 'table']
         }
@@ -575,95 +572,32 @@ class MsSqlMcpServer {
       // Schema Comparison Tools
       {
         name: 'mssql_compare_schemas',
-        description: 'Compare schemas between two databases',
+        description: 'Compare database schemas',
         inputSchema: {
           type: 'object',
           properties: {
-            source_database: { type: 'string', description: 'Source database name' },
-            target_database: { type: 'string', description: 'Target database name' },
-            schema: { type: 'string', description: 'Limit comparison to specific schema (optional)' }
+            source_database: { type: 'string', description: 'Source database' },
+            target_database: { type: 'string', description: 'Target database' },
+            schema: { type: 'string', description: 'Schema filter' }
           },
           required: ['source_database', 'target_database']
         }
       },
       {
         name: 'mssql_generate_sync_script',
-        description: 'Generate T-SQL script to synchronize schemas',
+        description: 'Generate schema sync script',
         inputSchema: {
           type: 'object',
           properties: {
             source_database: { type: 'string', description: 'Source database' },
             target_database: { type: 'string', description: 'Target database' },
-            include_data: { type: 'boolean', description: 'Include data sync (default: false)' },
-            dry_run: { type: 'boolean', description: 'Generate script without executing (default: true)' }
+            include_data: { type: 'boolean', description: 'Include data sync' },
+            dry_run: { type: 'boolean', description: 'Script only' }
           },
           required: ['source_database', 'target_database']
         }
       },
 
-      // SQL Agent Job Tools
-      {
-        name: 'mssql_list_jobs',
-        description: 'List SQL Server Agent jobs with pagination and filtering options',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            top: { type: 'number', description: 'Maximum number of jobs to return (default: 100, max: 500)' },
-            offset: { type: 'number', description: 'Number of jobs to skip for pagination (default: 0)' },
-            category: { type: 'string', description: 'Filter by job category name (optional)' },
-            enabled_only: { type: 'boolean', description: 'Only return enabled jobs (default: false)' },
-            name_pattern: { type: 'string', description: 'Filter by job name pattern using SQL LIKE syntax (optional)' },
-            include_description: { type: 'boolean', description: 'Include job descriptions in response (default: false)' },
-            max_description_length: { type: 'number', description: 'Maximum length for job descriptions (default: 200)' }
-          },
-          required: []
-        }
-      },
-      {
-        name: 'mssql_describe_job',
-        description: 'Get detailed job information including steps and schedules',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            job_name: { type: 'string', description: 'Job name' }
-          },
-          required: ['job_name']
-        }
-      },
-      {
-        name: 'mssql_job_history',
-        description: 'View job execution history with success/failure details',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            job_name: { type: 'string', description: 'Job name' },
-            top: { type: 'number', description: 'Number of history records to return (default: 50)' }
-          },
-          required: ['job_name']
-        }
-      },
-      {
-        name: 'mssql_job_status',
-        description: 'Get current job status (last run, next run, enabled/disabled)',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            job_name: { type: 'string', description: 'Job name (optional, returns all jobs if not specified)' }
-          },
-          required: []
-        }
-      },
-      {
-        name: 'mssql_analyze_job_failures',
-        description: 'Analyze job failures and error patterns over a time period',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            days_back: { type: 'number', description: 'Number of days to analyze (default: 30)' }
-          },
-          required: []
-        }
-      }
     ];
   }
 
@@ -1045,45 +979,6 @@ class MsSqlMcpServer {
             args.include_data,
             args.dry_run
           ),
-          name
-        );
-
-      // SQL Agent Job Tools
-      case 'mssql_list_jobs':
-        return this.formatResponse(
-          await this.jobTools.listJobs(pool, {
-            top: args.top,
-            offset: args.offset,
-            category: args.category,
-            enabled_only: args.enabled_only,
-            name_pattern: args.name_pattern,
-            include_description: args.include_description,
-            max_description_length: args.max_description_length
-          }),
-          name
-        );
-
-      case 'mssql_describe_job':
-        return this.formatResponse(
-          await this.jobTools.describeJob(pool, args.job_name),
-          name
-        );
-
-      case 'mssql_job_history':
-        return this.formatResponse(
-          await this.jobTools.getJobHistory(pool, args.job_name, args.top),
-          name
-        );
-
-      case 'mssql_job_status':
-        return this.formatResponse(
-          await this.jobTools.getJobStatus(pool, args.job_name),
-          name
-        );
-
-      case 'mssql_analyze_job_failures':
-        return this.formatResponse(
-          await this.jobTools.analyzeJobFailures(pool, args.days_back),
           name
         );
 

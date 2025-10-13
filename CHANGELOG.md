@@ -4,6 +4,39 @@ All notable changes to the MS SQL MCP Server will be documented in this file.
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- **Removed SQL Agent Job Monitoring Tools**: Removed 5 SQL Agent job analysis tools to reduce MCP protocol token usage
+  - **Removed tools**:
+    - `mssql_list_jobs` - List SQL Server Agent jobs
+    - `mssql_describe_job` - Get detailed job information
+    - `mssql_job_history` - View job execution history
+    - `mssql_job_status` - Monitor current job status
+    - `mssql_analyze_job_failures` - Analyze job failures
+  - **Removed module**: Deleted `src/tools/job-tools.ts` (~505 lines)
+  - **Removed types**: Removed 7 TypeScript interfaces from `src/types.ts` (JobInfo, JobDescription, JobStep, JobSchedule, JobHistoryRecord, JobStatus, JobFailureAnalysis)
+  - **Tool count**: Reduced from 43 to 38 tools
+
+### Changed
+
+- **MCP Protocol Compliance**: Tool definitions context reduced to comply with MCP protocol token limit
+  - Previous context size: ~25,686 tokens (exceeded 25,000 token limit)
+  - New context size: ~23,500 tokens (estimated, under limit)
+  - Resolves "Large MCP tools context" error from Claude Desktop `doctor` command
+- **Documentation**: Updated all documentation to reflect removal of SQL Agent job monitoring
+  - Removed SQL Agent references from README.md, CLAUDE.md, and openspec/project.md
+  - Updated tool counts throughout documentation (43 → 38 tools)
+  - Removed `msdb` database permission requirements
+
+### Migration Path
+
+Users requiring SQL Agent job monitoring should use:
+- **SQL Server Management Studio (SSMS)** - Full job management UI
+- **Azure Data Studio** - Cross-platform SQL Agent monitoring
+- **Custom Queries** - Direct queries against `msdb` system database if needed
+
+This functionality may be reintroduced in a separate, specialized MCP server if demand warrants.
+
 ## [1.2.1] - 2025-10-12
 
 ### Fixed
