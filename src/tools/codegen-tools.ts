@@ -501,9 +501,27 @@ export class CodeGenTools {
   }
 
   private toPascalCase(str: string): string {
-    return str.replace(/(?:^\w|[A-Z]|\b\w)/g, (letter, index) => {
-      return index === 0 ? letter.toUpperCase() : letter.toLowerCase();
-    }).replace(/\s+|_/g, '').replace(/^[a-z]/, c => c.toUpperCase());
+    if (!str) return str;
+
+    // Check if string has underscores or spaces
+    const hasDelimiters = /[_\s]/.test(str);
+
+    if (!hasDelimiters) {
+      // No delimiters - check if already PascalCase
+      const capitalCount = (str.match(/[A-Z]/g) || []).length;
+      if (capitalCount >= 2) {
+        // Already PascalCase, preserve it
+        return str;
+      }
+      // Single word - capitalize first letter, lowercase rest
+      return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    }
+
+    // Has delimiters - split and PascalCase each word
+    const words = str.split(/[_\s]+/).filter(w => w.length > 0);
+    return words
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join('');
   }
 
   private pluralize(str: string): string {

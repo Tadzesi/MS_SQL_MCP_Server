@@ -26,7 +26,10 @@
       "Bash(dir \"C:\\Users\\mhorny\\src\\git\\.npm\\@MS_SQL_MCP_Server\\openspec\\changes\\fix-mcp-token-limit\" /s /b)",
       "SlashCommand(/openspec:archive)",
       "Bash(npx openspec archive:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(npx openspec validate:*)",
+      "Bash(npm test)",
+      "Bash(npm test:*)"
     ],
     "deny": [],
     "ask": []
